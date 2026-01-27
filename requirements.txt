@@ -1,0 +1,6 @@
+numpy
+pymongo==4.10.1
+fastapi
+uvicorn
+pandas
+dotenv

@@ -1,26 +1,31 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Header, Body
+from fastapi import FastAPI,  Body,Depends,Request
 from dataclasses import dataclass
 import uuid,os
 import json,random
 import pandas as pd
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, RedirectResponse,FileResponse
+from fastapi.responses import HTMLResponse, RedirectResponse,FileResponse,Response
+from security import verify_jwt_token,create_jwt_token,LoginReq
 
 from pymongo import MongoClient 
-import datetime as dt
+import datetime as dt 
 import numpy as np
 from dotenv import load_dotenv
-
-load_dotenv()
+ 
+load_dotenv()  
 mongostring=os.getenv("MONGO")
+players = json.loads(os.getenv("FRANCHISES"))
+print(players)
 client = MongoClient(mongostring)
+
 
 db_2025 = client['XPL_2025']
 overall_2025 = db_2025['Overall']
 live_status_2025 = db_2025['Live Status']
 players_2025=db_2025['Players']
 
+user_db = client['XPL_Users'].users
 db_2026 = client['XPL_2026']
 overall_2026 = db_2026['Overall']
 live_status_2026 = db_2026['Live Status']
@@ -31,9 +36,12 @@ class dbmanager():
     def __init__(self,df1,df2,player_info,status_dict): 
         self.df = df1
         self.stats=df2
+
         self.player_info=player_info
         self.update_time =status_dict[0]['Last Refresh']
         self.update_match = status_dict[0]['Last Match']
+
+    
 
 def load_db(coll):
     data = list(coll.find({}))
@@ -72,7 +80,7 @@ dbm={"2025":dbm_2025,"2026":dbm_2026}
 dbm2={"2025":players_2025,"2026":players_2026}
 
 app = FastAPI()
-app.add_middleware(CORSMiddleware,allow_origins=['*'],allow_methods=['GET','POST','OPTIONS'])
+app.add_middleware(CORSMiddleware,allow_origins=['http://localhost:3000'],allow_methods=['GET','POST','OPTIONS'],allow_credentials=True)
 
 app.mount('/script',StaticFiles(directory="dist"), name="static")
 
@@ -113,6 +121,47 @@ async def getdata(key=Body(...)):
 @app.post('/latestupdate')
 async def getdate():
     return f"Last updated: {dbm['2026'].update_time} ({dbm['2026'].update_match})"
+
+@app.post('/login')
+async def login(response:Response,login_req:LoginReq):
+    
+    if login_req.signup:
+        obj={'username':login_req.user,
+            'password':login_req.password,
+            'transfers':5,
+            'transfer_history':[],
+            'c_changes':2,
+            'c_change_history':[],
+            'vc_changes':2,
+            'vc_change_history':[]}
+        op=user_db.update_one({"username":login_req.user},{ '$setOnInsert': obj },upsert= True )
+        response.set_cookie(key='XPL',value=create_jwt_token(login_req.user),httponly=True,secure=True,samesite="none")
+        if op.did_upsert:
+            return {'Status':'Success','User':login_req.user}
+        else:
+            return {'Status':'User exists'}
+    else:
+        pwd = user_db.find_one({'username':login_req.user,'password':login_req.password})
+        
+        if pwd:
+            response.set_cookie(key='XPL',value=create_jwt_token(login_req.user),httponly=True,secure=True,samesite="none")
+            return {'Status':'Success','User':login_req.user}
+        else:
+            return {'Status':'Failure'}
+        
+@app.post('/logout')
+async def logout(response:Response):
+    #response=RedirectResponse(url='http://localhost:3000')
+    #response.body='LoggedOut'
+    response.delete_cookie(key='XPL',httponly=True,secure=True,samesite="none")
+    return 'LoggedOut'
+
+@app.post('/validate_session')
+async def validate_session(xpl=Depends(verify_jwt_token)):
+    print(xpl)
+    return xpl
+
+
 
 #Fantasy points table
 @app.post('/{year:str}/standings')
@@ -230,7 +279,7 @@ def status(year):
  
 #Current squad in team sheet format
 @app.post('/{year:str}/stats/squad')
-def current_squad(year):
+def current_squad(year,):
     df = pd.DataFrame(dbm2[year].find({}).to_list())
     df_filtered = df[(df['Sold_To']!='Unsold')&(df['Sold_To']!='')]
     return_df = df_filtered.groupby(['Sold_To'])['Player'].apply(list).apply(pd.Series).reset_index()
@@ -239,6 +288,16 @@ def current_squad(year):
     return_df = return_df[1:].reset_index(drop=True).fillna('')
     #return_df = return_df.reindex(sorted(df_filtered['Team'].unique()),axis=1)
     return return_df.to_dict(orient='records')
+
+#Current squad in team sheet format
+@app.post('/teamdata')
+def my_squad(user=Depends(verify_jwt_token)):
+    print(user)
+    df = pd.DataFrame(overall_2026.find({"Team":user}).to_list())
+    print(df)
+    df=df[['Player','Bench','Captain','Vice_Captain']]
+    #return_df = return_df.reindex(sorted(df_filtered['Team'].unique()),axis=1)
+    return df.to_dict(orient='records')
 
 @app.post('/{year:str}/graph/{team}/pie')
 def pie_graph(team:str,year):

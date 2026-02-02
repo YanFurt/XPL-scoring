@@ -1,6 +1,6 @@
 import React,{ useEffect,  useState } from 'react';
 import Plot from 'react-plotly.js';
-import {useParams,NavLink} from 'react-router'
+import {useParams,NavLink,redirect} from 'react-router'
 import { useNavigate } from 'react-router-dom';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -10,6 +10,9 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
 import './styles.css'
+
+
+
 
 const franchises = JSON.parse(process.env.FRANCHISES||"{}")
 
@@ -31,6 +34,68 @@ async function getAucData(url:String) {
     console.error(error.message);
   }
 }
+
+async function DoLogin(payload) {
+  const host = window.location.origin 
+  //const host='http://127.0.0.1:8000'
+  try {
+    const response = await fetch(`${host}/login`,{
+      method: "POST",
+      credentials: "include",
+      headers: {
+    "Content-Type": "application/json"
+  },
+  body:JSON.stringify(payload)});
+    if (!response.ok) {
+      throw new Error(`Response status: ${response.status}`);
+    }
+    
+    const data = await response.text();
+    //console.log(data)
+    return JSON.parse(data)
+    //console.log(json);   i
+  } catch (error:any) {
+    console.error(error.message);
+  }
+}
+
+async function DoLogout() {
+  const host = window.location.origin 
+  //const host='http://127.0.0.1:8000'
+  try {
+    const response = await fetch(`${host}/logout`,{
+      method: "POST",
+      credentials: "include",
+      });
+    if (!response.ok) {
+      throw new Error(`Response status: ${response.status}`);
+    }
+    
+    const data = await response.text();
+    //console.log(data)
+    return JSON.parse(data)
+    //console.log(json);   i
+  } catch (error:any) {
+    console.error(error.message);
+  }
+}
+
+async function hashPassword(password) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+
+  // convert buffer to hex string
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+
+  return hashHex;
+}
+
+
 
 function BasicTable({rows}) {
      return ( 
@@ -145,55 +210,56 @@ export function PointsTable  () {
      </div>
 };
 
-export const Navbar =()=>{
-  const [time,setTime] = useState('Last updated: -')
+export const Navbar =({user,updater,year,yearupdater})=>{
+  //const [time,setTime] = useState('Last updated: -')
    //const arr = ['Spartan Warriors', 'Merciless Strikers','Fireballs','Trailblazers','Knight Riders','Invincibles','Storm Troopers']
    const awards = ['Runs', 'Wickets', 'Dots','Sixes','Catches']
    const misc = ['Sold Player Stats', 'Unsold Player Stats','MVPs','Player Status']
-   const year=window.location.href.split('/')[3]
-   const [fetchyear,setFetchYear] = useState(year)
+   
    const navigate=useNavigate() 
   
    useEffect( ()=>{ 
     (async () => {
       const users = await getAucData("latestupdate");
-      setTime(users);
+      //setTime(users);
     })();}
     ,[])
 
     const handleSelect = (e) => {
         const selectedyear = e.target.value;
-        console.log(selectedyear);
-        setFetchYear(selectedyear);
+        yearupdater(selectedyear);
         navigate(`/${selectedyear}`);
+    };
+
+    const handleLogout = async (e) => {
+      const text = await DoLogout();
+      updater('')
+      navigate(`/${year}`);
     };
 
    return <div className="navbar">
     <nav>
-    <NavLink className='Navlink' style={{ margin: 10 }} to={`/${fetchyear}`} end>Standings</NavLink>
-    <NavLink className='Navlink' style={{ margin: 10 }} to={`/${fetchyear}/stats/squad`}>Squads</NavLink>
+    <NavLink className='Navlink' style={{ margin: 10 }} to={`/${year}`} end>Standings</NavLink>
+    <NavLink className='Navlink' style={{ margin: 10 }} to={`/${year}/stats/squad`}>Squads</NavLink>
     <div className="dropdown">
       <button className="dropbtn">Awards
-        <i className="fa fa-caret-down"></i>
       </button>
       <div className="dropdown-content">
-      {awards.map((a)=><NavLink className='Navlink' style={{ margin: 10 }} to={`/${fetchyear}/awards/${a}`}>{a}</NavLink>)}
+      {awards.map((a)=><NavLink key={a} className='Navlink' style={{ margin: 10 }} to={`/${year}/awards/${a}`}>{a}</NavLink>)}
       </div>
     </div>
     <div className="dropdown">
       <button className="dropbtn">Team Stats
-        <i className="fa fa-caret-down"></i>
       </button>
       <div className="dropdown-content">
-      {Object.keys(franchises).map((a)=><NavLink className='Navlink' style={{ marginRight: 10 }} to={`/${fetchyear}/players/${a}`}>{franchises[a]}</NavLink>)}
+      {Object.keys(franchises).map((a)=><NavLink key={a} className='Navlink' style={{ marginRight: 10 }} to={`/${year}/players/${a}`}>{franchises[a]}</NavLink>)}
       </div>
     </div>
     <div className="dropdown">
       <button className="dropbtn">Player Info
-        <i className="fa fa-caret-down"></i>
       </button>
       <div className="dropdown-content">
-      {misc.map((a)=><NavLink className='Navlink' style={{ marginRight: 10 }} to={`/${fetchyear}/stats/${a.replaceAll(' ','')}`}>{a}</NavLink>)}
+      {misc.map((a)=><NavLink className='Navlink' key={a} style={{ marginRight: 10 }} to={`/${year}/stats/${a.replaceAll(' ','')}`}>{a}</NavLink>)}
       </div>
     </div>
     <div className="dropdown">
@@ -202,8 +268,17 @@ export const Navbar =()=>{
         <option value="2025">XPL 2025</option>
     </select>
     </div>
+    {user ? <div className="dropdown">
+      <button className="dropbtn">Hello {user}!
+      </button>
+      <div className="dropdown-content">
+      <NavLink className='Navlink' style={{ margin: 10 }} to={`/manageteam`}>Team Management</NavLink>
+      <NavLink className='Navlink' style={{ margin: 10 }} to={`/login`}>Betting arena</NavLink>
+      <button className='Navlink' style={{ margin: 10 }} onClick={handleLogout}>Logout</button>
+      </div>
+    </div> :<NavLink className='Navlink' style={{ margin: 10 }} to={`/login`}>Login</NavLink>}
     </nav>
-    <h5 style={{fontSize:12, textAlign:'right',color:'white'}}>{time}</h5>
+    {/* <h5 style={{fontSize:12, textAlign:'right',color:'white'}}>{time}</h5> */}
   </div> 
 
 }
@@ -456,4 +531,109 @@ export const PlayerStat =() => {
 
 
 
- 
+
+
+export function AuthForm({updater}) {
+  const [mode, setMode] = useState("login"); // "login" or "signup"
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const navigate = useNavigate()
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    const payload = {}
+    if (mode === "signup" && password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    if (mode === "login") {
+      payload['user']=username
+      payload['password']=await hashPassword(password)
+      payload['signup']=false
+    } else {
+      payload['user']=username
+      payload['password']=await hashPassword(password);
+      payload['signup']=true
+    }
+
+    const resp=await DoLogin(payload)
+
+    if (resp.Status=='Success'){
+      updater(resp.User)
+      navigate('/')
+    }
+    else if (resp.Status=='User exists'){
+        setError("User already exists")
+    }
+    else if (resp.Status=='Failure'){
+      setError("Incorrect Password or server error or user doesnt exist")
+    }
+
+  };
+
+  return (
+    <div style={{ maxWidth: 300, margin: "2rem auto" }}>
+      <h2>{mode === "login" ? "Login" : "Sign Up"}</h2>
+
+      <form onSubmit={handleSubmit}>
+        <div>
+          <input
+            type="text"
+            placeholder="Username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            required
+          />
+        </div>
+
+        <div>
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </div>
+
+        {mode === "signup" && (
+          <div>
+            <input
+              type="password"
+              placeholder="Confirm Password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+            />
+          </div>
+        )}
+
+        {error && <p style={{ color: "red" }}>{error}</p>}
+
+        <button type="submit">
+          {mode === "login" ? "Login" : "Create Account"}
+        </button>
+      </form>
+
+      <p style={{ marginTop: "1rem" }}>
+        {mode === "login" ? (
+          <>
+            Don’t have an account?{" "}
+            <button onClick={() => setMode("signup")}>Sign up</button>
+          </>
+        ) : (
+          <>
+            Already have an account?{" "}
+            <button onClick={() => setMode("login")}>Login</button>
+          </>
+        )}
+      </p>
+    </div>
+  );
+}
+
+

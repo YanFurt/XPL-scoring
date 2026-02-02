@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, RedirectResponse,FileResponse,Response
 from security import verify_jwt_token,create_jwt_token,LoginReq
 
-from pymongo import MongoClient 
+from pymongo import MongoClient ,UpdateOne, UpdateMany
 import datetime as dt 
 import numpy as np
 from dotenv import load_dotenv
@@ -124,7 +124,8 @@ async def getdate():
 
 @app.post('/login')
 async def login(response:Response,login_req:LoginReq):
-    
+    if login_req.user not in players.keys():
+        return {'Status':'Failure'}
     if login_req.signup:
         obj={'username':login_req.user,
             'password':login_req.password,
@@ -157,9 +158,39 @@ async def logout(response:Response):
     return 'LoggedOut'
 
 @app.post('/validate_session')
-async def validate_session(xpl=Depends(verify_jwt_token)):
-    print(xpl)
-    return xpl
+async def validate_session(user=Depends(verify_jwt_token)):
+    print(user)
+    return user
+
+
+
+
+@app.post('/updateteam')
+async def update_team(request:Request,user=Depends(verify_jwt_token)):
+    payload = await request.json()
+    operations = []
+    cap_change = payload.get("cap_change")
+    if cap_change:
+        operations.append(UpdateOne(filter={ "Player": cap_change[1] },
+                    update={ "$set": { "Captain": True }}))
+        
+        operations.append(UpdateOne(filter={ "Player": cap_change[0] },
+                update={ "$set": { "Captain": False }}))
+    vcap_change = payload.get("vcap_change")
+    if vcap_change:
+        operations.append(UpdateOne(filter={ "Player": vcap_change[1] },
+                    update={ "$set": { "Vice_Captain": True }}))
+        
+        operations.append(UpdateOne(filter={ "Player": vcap_change[0] },
+                update={ "$set": { "Captain": False }}))
+    if transferin:=payload.get("in"):
+        operations.append(UpdateMany(filter={"Player":{"$in":transferin}},
+                        update={ "$set": { "Bench": False }}))
+    if transferout:=payload.get("out"):
+        operations.append(UpdateMany(filter={"Player":{"$in":transferout}},
+                        update={ "$set": { "Bench": True }}))  
+    overall_2026.bulk_write(requests=operations)
+    return 'Success'
 
 
 

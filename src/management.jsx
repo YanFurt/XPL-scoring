@@ -162,7 +162,30 @@ async function getTeam() {
   }
 }
 
-
+async function setTeamState(body) {
+  const host = window.location.origin 
+  //const host='http://127.0.0.1:8000'
+  try {
+    const response = await fetch(`${host}/updateteam`,{
+      method: "POST",
+      credentials:'include',
+      body:JSON.stringify(body),
+      headers: {
+        'Content-Type': 'application/json' // Explicitly setting the content type
+    }
+  });
+    if (!response.ok) {
+      throw new Error(`Response status: ${response.status}`);
+    }
+    
+    const data = await response.text();
+    console.log(data)
+    return JSON.parse(data)
+    //console.log(json);   i
+  } catch (error) {
+    console.error(error.message);
+  }
+}
 
 
 export  function SquadSelector() {
@@ -342,7 +365,19 @@ const handleSubmit = ()=>{
 
 const handleClose = ()=>{setOpen(false)}
 
-const handleConfirm = ()=>{
+const handleConfirm = async ()=>{
+  setOpen(false);
+  const status = await setTeamState(payload);
+  if(status=='Success'){
+    const cap=team.find(p=>p.Captain)||{}
+    const vcap=team.find(p=>p.Vice_Captain)||{}
+    setOriginal({cap,vcap})
+    setOriginalBench(new Set(bench.map(p=>p.Player)))
+    setBenchlogs([])
+    setCaplog('')
+    setVcaplog('');
+    setPayload({in:[],out:[]})
+  }
   
 }
 

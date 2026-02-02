@@ -178,11 +178,11 @@ async def update_team(request:Request,user=Depends(verify_jwt_token)):
                 update={ "$set": { "Captain": False }}))
     vcap_change = payload.get("vcap_change")
     if vcap_change:
-        operations.append(UpdateOne(filter={ "Player": vcap_change[1] },
+        operations.append(UpdateOne(filter={ "Player": vcap_change[0] },
                     update={ "$set": { "Vice_Captain": True }}))
         
-        operations.append(UpdateOne(filter={ "Player": vcap_change[0] },
-                update={ "$set": { "Captain": False }}))
+        operations.append(UpdateOne(filter={ "Player": vcap_change[1] },
+                update={ "$set": { "Vice_Captain": False }}))
     if transferin:=payload.get("in"):
         operations.append(UpdateMany(filter={"Player":{"$in":transferin}},
                         update={ "$set": { "Bench": False }}))

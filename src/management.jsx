@@ -4,8 +4,7 @@ import React,{ useEffect,  useState } from 'react';
 import {
   DndContext,
   closestCenter,
-  rectIntersection,
-  PointerSensor,
+  MouseSensor,
   TouchSensor,
   useSensor,
   useSensors,
@@ -93,18 +92,19 @@ function SortableContainer({ containerId, elements }) {
     transform: CSS.Transform.toString(transform),
     transition,
     cursor: disabled ? "not-allowed" : "grab",
-     color: isOver ? 'green' : undefined
+     color: isOver ? 'green' : undefined,
+     touchAction: 'none' 
   };
 
   return (<Box
       ref={setNodeRef}
-      sx={{
+      sx={{...{
         display: 'grid',
         gridTemplateColumns: elements.length>=10?'1fr 1fr':'1fr',
         columnGap: 2,
         rowGap: 1,
         backgroundColor: isOver ? 'action.hover' : undefined,
-      }}
+      },...style}}
     >
       <SortableContext
         items={elements.map(p => p.Player)}
@@ -210,7 +210,7 @@ export  function SquadSelector() {
   const [open,setOpen]=useState(false)
   const [payload,setPayload] = useState({in:[],out:[]})
   const sensors = useSensors(
-    useSensor(PointerSensor, {
+    useSensor(MouseSensor, {
       activationConstraint: { distance: 5 }
     }),
     useSensor(TouchSensor, {

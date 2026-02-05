@@ -126,13 +126,13 @@ function generateBenchLogs(original,newbench,updater){
  
 
   if (original.size ==0){
-    updater({out:newbench})
+    updater({out:newbench,in:[]})
     return newbench.map(p=>`You added ${p} to the bench`)
   }
   else{
     const set = new Set(newbench)
     const out_players = Array.from(set.difference(original))
-    const in_players=Array.from(original.difference(set))
+    const in_players=Array.from(original.difference(set))||[]
 
     updater({in:in_players,out:out_players})
     return in_players.length>0?in_players.map((c,i)=>`You transferred in ${c} for ${out_players[i]}`):[]
@@ -154,7 +154,7 @@ async function getTeam() {
     }
     
     const data = await response.text();
-    console.log(data)
+    //console.log(data)
     return JSON.parse(data)
     //console.log(json);   i
   } catch (error) {
@@ -521,10 +521,10 @@ const handleConfirm = async ()=>{
         <DialogTitle>Summary</DialogTitle>
         <DialogContent>
           <Typography sx={{ whiteSpace: 'pre-wrap' }}>
-            {payload.in.length>0? `In: ${payload.in.join(', ')}\n`:'' }
-            {payload.out.length>0? `In: ${payload.out.join(', ')}\n`:'' }
-            {caplog?`${caplog}\n`:""}
-            {vcaplog?`${vcaplog}\n`:""}
+            {payload.in.length? `In: ${payload.in.join(', ')}\n\n`:'' }
+            {payload.out.length>0? `Out: ${payload.out.join(', ')}\n\n`:'' }
+            {caplog?`${caplog}\n\n`:""}
+            {vcaplog?`${vcaplog}\n\n`:""}
           </Typography>
           <br></br>
           <Typography>

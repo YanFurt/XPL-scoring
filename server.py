@@ -30,7 +30,7 @@ db_2026 = client['XPL_2026']
 overall_2026 = db_2026['Overall']
 live_status_2026 = db_2026['Live Status']
 players_2026=db_2026['Players']
-
+Squad_2026=db_2026['Squads']
 class dbmanager(): 
 
     def __init__(self,df1,df2,player_info,status_dict): 
@@ -47,19 +47,35 @@ def load_db(coll):
     data = list(coll.find({}))
     df = pd.DataFrame(data)
     df.columns = df.columns.str.replace("_", " ")
+    
+    
+    try:
+        return_df = df.groupby(['Team','Player']).sum().reset_index()
+        print(return_df.columns)
+        return_df['Appearance Points'] = return_df['Appearance']
+        return_df['Batting Points'] = return_df['Runs'] + return_df['Fours'] + return_df['Sixes'] + return_df['Ducks']\
+                                    + return_df['SR'] + return_df['Thirty'] + return_df['Fifty'] + return_df['Hundred']
+        return_df['Bowling Points'] = return_df['Wickets'] + return_df['Dots'] + return_df['Maidens'] + return_df['ER']\
+                                    + return_df['Three W'] + return_df['Four W'] + return_df['Five W']
+        return_df['Fielding Points'] = return_df['Catches'] + return_df['Runout'] + return_df['Direct Runout'] + return_df['Stumping']
 
-    return_df = df.groupby(['Team','Player','Type','IPL Team']).sum().reset_index()
-    return_df['Appearance Points'] = return_df['Appearance']
-    return_df['Batting Points'] = return_df['Runs'] + return_df['Fours'] + return_df['Sixes'] + return_df['Ducks']\
-                                + return_df['SR'] + return_df['Thirty'] + return_df['Fifty'] + return_df['Hundred']
-    return_df['Bowling Points'] = return_df['Wickets'] + return_df['Dots'] + return_df['Maidens'] + return_df['ER']\
-                                + return_df['Three W'] + return_df['Four W'] + return_df['Five W']
-    return_df['Fielding Points'] = return_df['Catches'] + return_df['Runout'] + return_df['Direct Runout'] + return_df['Stumping']
-    return_df['Total Points'] = return_df['Total']
-    return_df['Points per Match'] = np.where(return_df['Total Matches']==0,0,return_df['Total']/return_df['Total Matches'])
-    return_df = return_df[['Team','Player','Type','IPL Team',
-                        'Appearance Points','Batting Points','Bowling Points','Fielding Points','Total Points',
-                        'Total Matches','C Matches','VC Matches','Points per Match']].sort_values(by=['Total Points','Player'])
+        return_df['Points per Match'] = np.where(return_df['Total Matches']==0,0,return_df['Total Points']/return_df['Total Matches'])
+        return_df = return_df[['Team','Player',
+                            'Appearance Points','Batting Points','Bowling Points','Fielding Points','Total Points',
+                            'Total Matches','C Matches','VC Matches','Points per Match']].sort_values(by=['Total Points','Player'])
+    except:
+        return_df = df.groupby(['Team','Player']).sum().reset_index()
+        return_df['Appearance Points'] = return_df['Appearance']
+        return_df['Batting Points'] = return_df['Runs'] + return_df['Fours'] + return_df['Sixes'] + return_df['Ducks']\
+                                    + return_df['SR'] + return_df['Thirty'] + return_df['Fifty'] + return_df['Hundred']
+        return_df['Bowling Points'] = return_df['Wickets'] + return_df['Dots'] + return_df['Maidens'] + return_df['ER']\
+                                    + return_df['Three W'] + return_df['Four W'] + return_df['Five W']
+        return_df['Fielding Points'] = return_df['Catches'] + return_df['Runout'] + return_df['Direct Runout'] + return_df['Stumping']
+        return_df['Total Points'] = return_df['Total']
+        return_df['Points per Match'] = np.where(return_df['Total Matches']==0,0,return_df['Total']/return_df['Total Matches'])
+        return_df = return_df[['Team','Player','Type','IPL Team',
+                            'Appearance Points','Batting Points','Bowling Points','Fielding Points','Total Points',
+                            'Total Matches','C Matches','VC Matches','Points per Match']].sort_values(by=['Total Points','Player'])
 
     return df,return_df
 
@@ -172,10 +188,10 @@ async def update_team(request:Request,user=Depends(verify_jwt_token)):
     cap_change = payload.get("cap_change")
     if cap_change:
         operations.append(UpdateOne(filter={ "Player": cap_change[1] },
-                    update={ "$set": { "Captain": True }}))
+                    update={ "$set": { "Captain": False }}))
         
         operations.append(UpdateOne(filter={ "Player": cap_change[0] },
-                update={ "$set": { "Captain": False }}))
+                update={ "$set": { "Captain": True }}))
     vcap_change = payload.get("vcap_change")
     if vcap_change:
         operations.append(UpdateOne(filter={ "Player": vcap_change[0] },
@@ -189,7 +205,7 @@ async def update_team(request:Request,user=Depends(verify_jwt_token)):
     if transferout:=payload.get("out"):
         operations.append(UpdateMany(filter={"Player":{"$in":transferout}},
                         update={ "$set": { "Bench": True }}))  
-    overall_2026.bulk_write(requests=operations)
+    Squad_2026.bulk_write(requests=operations)
     return 'Success'
 
 
@@ -198,8 +214,8 @@ async def update_team(request:Request,user=Depends(verify_jwt_token)):
 @app.post('/{year:str}/standings')
 def points_df(year):
     df = dbm[year].df
-    return_df = df[(df['Team']!='Unsold')&(df['Team']!='')].groupby(['Team'])[['Total','Total Matches','C Matches','VC Matches']].sum().\
-                sort_values(by=['Total','Total Matches'],ascending=[False,True]).reset_index()
+    return_df = df[(df['Team']!='Unsold')&(df['Team']!='')].groupby(['Team'])[['Total Points','Total Matches','C Matches','VC Matches']].sum().\
+                sort_values(by=['Total Points','Total Matches'],ascending=[False,True]).reset_index()
     return return_df.to_dict(orient='records')
 
 @app.get('/updatename')
@@ -324,7 +340,7 @@ def current_squad(year,):
 @app.post('/teamdata')
 def my_squad(user=Depends(verify_jwt_token)):
     print(user)
-    df = pd.DataFrame(overall_2026.find({"Team":user}).to_list())
+    df = pd.DataFrame(Squad_2026.find({"Team":user}).to_list())
     print(df)
     df=df[['Player','Bench','Captain','Vice_Captain']]
     #return_df = return_df.reindex(sorted(df_filtered['Team'].unique()),axis=1)

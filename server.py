@@ -326,14 +326,24 @@ def status(year):
  
 #Current squad in team sheet format
 @app.post('/{year:str}/stats/squad')
-def current_squad(year,):
-    df = pd.DataFrame(dbm2[year].find({}).to_list())
-    df_filtered = df[(df['Sold_To']!='Unsold')&(df['Sold_To']!='')]
-    return_df = df_filtered.groupby(['Sold_To'])['Player'].apply(list).apply(pd.Series).reset_index()
-    return_df = return_df.transpose()
-    return_df.columns = return_df.iloc[0]
-    return_df = return_df[1:].reset_index(drop=True).fillna('')
-    #return_df = return_df.reindex(sorted(df_filtered['Team'].unique()),axis=1)
+def current_squad(year):
+    if year=='2026':
+        
+        df = pd.DataFrame(Squad_2026.find({}).to_list())
+        df=df[['Team','Player','Bench','Captain','Vice_Captain']]
+        df['Player'] = df['Player']+int(df['Bench'])*'(B)'+int(df['Captain'])*'(C)'+int(df['Vice_Captain'])*'(VC)'
+        return_df = df_filtered.groupby(['Team'])['Player'].apply(list).apply(pd.Series).reset_index()
+        return_df = return_df.transpose()
+        return_df.columns = return_df.iloc[0]
+        return_df = return_df[1:].reset_index(drop=True)
+    else:
+        df = pd.DataFrame(dbm2[year].find({}).to_list())
+        df_filtered = df[(df['Sold_To']!='Unsold')&(df['Sold_To']!='')]
+        return_df = df_filtered.groupby(['Sold_To'])['Player'].apply(list).apply(pd.Series).reset_index()
+        return_df = return_df.transpose()
+        return_df.columns = return_df.iloc[0]
+        return_df = return_df[1:].reset_index(drop=True).fillna('')
+        #return_df = return_df.reindex(sorted(df_filtered['Team'].unique()),axis=1)
     return return_df.to_dict(orient='records')
 
 #Current squad in team sheet format

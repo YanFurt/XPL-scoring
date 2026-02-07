@@ -317,7 +317,7 @@ function SquadTable({rows}) {
 
   return ( 
     <TableContainer component={Paper} >
-      <Table sx={{ width: 1000,margin:'auto' }} aria-label="simple table">
+      <Table sx={{ width: '100%',margin:'auto' }} aria-label="simple table">
         <TableHead style={{position:'sticky',backgroundColor:'grey',top:0}}>
           <TableRow>
             {cols.map((a)=><TableCell align="center">{a}</TableCell>)}
@@ -419,7 +419,7 @@ export function MiscStat(){
      return   <div style={{ height: '100%', width: '100%' }}>
 
       <h1 style={{textAlign:'center'}}>{endpointmap[endpoint||'']?.toUpperCase()}</h1>
-      { endpoint=='squad'? <div style={{ display: 'flex', flexDirection: 'column',maxHeight:1000,maxWidth:1100 ,margin:'20px auto'}}>
+      { endpoint=='squad'? <div style={{ display: 'flex', flexDirection: 'column',height:'86vh' ,margin:'20px auto'}}>
      <SquadTable rows={data} ></SquadTable>
      </div>:
      <div style={{ display: 'flex', flexDirection: 'column',maxHeight:800,maxWidth:1100 ,margin:'20px auto'}}>

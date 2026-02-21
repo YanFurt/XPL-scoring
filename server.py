@@ -49,33 +49,37 @@ def load_db(coll):
     df.columns = df.columns.str.replace("_", " ")
     
     
-    try:
-        return_df = df.groupby(['Team','Player']).sum().reset_index()
-        print(return_df.columns)
-        return_df['Appearance Points'] = return_df['Appearance']
-        return_df['Batting Points'] = return_df['Runs'] + return_df['Fours'] + return_df['Sixes'] + return_df['Ducks']\
-                                    + return_df['SR'] + return_df['Thirty'] + return_df['Fifty'] + return_df['Hundred']
-        return_df['Bowling Points'] = return_df['Wickets'] + return_df['Dots'] + return_df['Maidens'] + return_df['ER']\
-                                    + return_df['Three W'] + return_df['Four W'] + return_df['Five W']
-        return_df['Fielding Points'] = return_df['Catches'] + return_df['Runout'] + return_df['Direct Runout'] + return_df['Stumping']
+  
+    return_df = df.groupby(['Team','Player']).sum().reset_index()
+    
+    if 'IPL Team' not in return_df.columns:
+        return_df['IPL Team']=''
+    if 'Type' not in return_df.columns:
+        return_df['Type']=''
+    return_df['Appearance Points'] = return_df['Appearance']
+    return_df['Batting Points'] = return_df['Runs'] + return_df['Fours'] + return_df['Sixes'] + return_df['Ducks']\
+                                + return_df['SR'] + return_df['Thirty'] + return_df['Fifty'] + return_df['Hundred']
+    return_df['Bowling Points'] = return_df['Wickets'] + return_df['Dots'] + return_df['Maidens'] + return_df['ER']\
+                                + return_df['Three W'] + return_df['Four W'] + return_df['Five W']
+    return_df['Fielding Points'] = return_df['Catches'] + return_df['Runout'] + return_df['Direct Runout'] + return_df['Stumping']
 
-        return_df['Points per Match'] = np.where(return_df['Total Matches']==0,0,return_df['Total Points']/return_df['Total Matches'])
-        return_df = return_df[['Team','Player',
-                            'Appearance Points','Batting Points','Bowling Points','Fielding Points','Total Points',
-                            'Total Matches','C Matches','VC Matches','Points per Match']].sort_values(by=['Total Points','Player'])
-    except:
-        return_df = df.groupby(['Team','Player']).sum().reset_index()
-        return_df['Appearance Points'] = return_df['Appearance']
-        return_df['Batting Points'] = return_df['Runs'] + return_df['Fours'] + return_df['Sixes'] + return_df['Ducks']\
-                                    + return_df['SR'] + return_df['Thirty'] + return_df['Fifty'] + return_df['Hundred']
-        return_df['Bowling Points'] = return_df['Wickets'] + return_df['Dots'] + return_df['Maidens'] + return_df['ER']\
-                                    + return_df['Three W'] + return_df['Four W'] + return_df['Five W']
-        return_df['Fielding Points'] = return_df['Catches'] + return_df['Runout'] + return_df['Direct Runout'] + return_df['Stumping']
-        return_df['Total Points'] = return_df['Total']
-        return_df['Points per Match'] = np.where(return_df['Total Matches']==0,0,return_df['Total']/return_df['Total Matches'])
-        return_df = return_df[['Team','Player','Type','IPL Team',
-                            'Appearance Points','Batting Points','Bowling Points','Fielding Points','Total Points',
-                            'Total Matches','C Matches','VC Matches','Points per Match']].sort_values(by=['Total Points','Player'])
+    return_df['Points per Match'] = np.where(return_df['Total Matches']==0,0,return_df['Total Points']/return_df['Total Matches'])
+    return_df = return_df[['Team','Player','IPL Team','Type',
+                        'Appearance Points','Batting Points','Bowling Points','Fielding Points','Total Points',
+                        'Total Matches','C Matches','VC Matches','Points per Match']].sort_values(by=['Total Points','Player'])
+    # except:
+    #     return_df = df.groupby(['Team','Player']).sum().reset_index()
+    #     return_df['Appearance Points'] = return_df['Appearance']
+    #     return_df['Batting Points'] = return_df['Runs'] + return_df['Fours'] + return_df['Sixes'] + return_df['Ducks']\
+    #                                 + return_df['SR'] + return_df['Thirty'] + return_df['Fifty'] + return_df['Hundred']
+    #     return_df['Bowling Points'] = return_df['Wickets'] + return_df['Dots'] + return_df['Maidens'] + return_df['ER']\
+    #                                 + return_df['Three W'] + return_df['Four W'] + return_df['Five W']
+    #     return_df['Fielding Points'] = return_df['Catches'] + return_df['Runout'] + return_df['Direct Runout'] + return_df['Stumping']
+    #     return_df['Total Points'] = return_df['Total']
+    #     return_df['Points per Match'] = np.where(return_df['Total Matches']==0,0,return_df['Total']/return_df['Total Matches'])
+    #     return_df = return_df[['Team','Player',
+    #                         'Appearance Points','Batting Points','Bowling Points','Fielding Points','Total Points',
+    #                         'Total Matches','C Matches','VC Matches','Points per Match']].sort_values(by=['Total Points','Player'])
 
     return df,return_df
 
@@ -94,7 +98,7 @@ dbm_2025 = dbmanager(*load_db(overall_2025),load_players(players_2025),load_stat
 
 dbm={"2025":dbm_2025,"2026":dbm_2026}
 dbm2={"2025":players_2025,"2026":players_2026}
-
+ 
 app = FastAPI()
 app.add_middleware(CORSMiddleware,allow_origins=['http://localhost:3000'],allow_methods=['GET','POST','OPTIONS'],allow_credentials=True)
 
@@ -214,6 +218,7 @@ async def update_team(request:Request,user=Depends(verify_jwt_token)):
 @app.post('/{year:str}/standings')
 def points_df(year):
     df = dbm[year].df
+    print(df.columns)
     return_df = df[(df['Team']!='Unsold')&(df['Team']!='')].groupby(['Team'])[['Total Points','Total Matches','C Matches','VC Matches']].sum().\
                 sort_values(by=['Total Points','Total Matches'],ascending=[False,True]).reset_index()
     return return_df.to_dict(orient='records')
@@ -293,8 +298,9 @@ def unsold_df(year):
 @app.post('/{year:str}/player/{team}')
 def team_player_df(team,year):
     df = dbm[year].stats
+    print(df.columns)
     return_df = df[(df['Team']==team)]
-    return_df = return_df[['Player','Type','IPL Team',
+    return_df = return_df[['Player',#'Type','IPL Team',
                          'Appearance Points','Batting Points','Bowling Points','Fielding Points','Total Points',
                          'Total Matches','C Matches','VC Matches','Points per Match']]
     return_df['Points per Match'] = return_df['Points per Match'].astype('float').round(2)
@@ -360,6 +366,7 @@ def my_squad(user=Depends(verify_jwt_token)):
 def pie_graph(team:str,year):
     df = dbm[year].stats
     return_df = df[(df['Team']==team)]
+    
     #return_df['Captaincy Points']=return_df['Total Points'] - return_df['Appearance Points'] - return_df['Batting Points'] - return_df['Bowling Points'] - return_df['Fielding Points']
     return_df1 = return_df[['Appearance Points','Batting Points','Bowling Points','Fielding Points']].sum()
     return_df2 = return_df.groupby('IPL Team')[['Appearance Points','Batting Points','Bowling Points','Fielding Points']].sum().sum(axis=1)

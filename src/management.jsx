@@ -142,7 +142,7 @@ function generateBenchLogs(original,newbench,updater){
 
 
 async function getTeam() {
-  const host = window.location.origin 
+  const host = "http://127.0.0.1:8000" 
   //const host='http://127.0.0.1:8000'
   try {
     const response = await fetch(`${host}/teamdata`,{
@@ -163,7 +163,7 @@ async function getTeam() {
 }
 
 async function setTeamState(body) {
-  const host = window.location.origin 
+  const host = "http://127.0.0.1:8000" 
   //const host='http://127.0.0.1:8000'
   try {
     const response = await fetch(`${host}/updateteam`,{

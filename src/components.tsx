@@ -17,7 +17,7 @@ import './styles.css'
 const franchises = JSON.parse(process.env.FRANCHISES||"{}")
 
 async function getAucData(url:String) {
-  const host = window.location.origin 
+  const host = "http://127.0.0.1:8000" 
   //const host='http://127.0.0.1:8000'
   try {
     const response = await fetch(`${host}/${url}`,{
@@ -36,7 +36,7 @@ async function getAucData(url:String) {
 }
 
 async function DoLogin(payload) {
-  const host = window.location.origin 
+  const host = "http://127.0.0.1:8000" 
   //const host='http://127.0.0.1:8000'
   try {
     const response = await fetch(`${host}/login`,{
@@ -60,7 +60,7 @@ async function DoLogin(payload) {
 }
 
 async function DoLogout() {
-  const host = window.location.origin 
+  const host = "http://127.0.0.1:8000" 
   //const host='http://127.0.0.1:8000'
   try {
     const response = await fetch(`${host}/logout`,{
@@ -119,7 +119,7 @@ function BasicTable({rows}) {
                  <TableCell component="th" scope="row">
                    {franchises[row.Team]}
                  </TableCell>
-                 <TableCell align="center">{row['Total']}</TableCell>
+                 <TableCell align="center">{row['Total Points']}</TableCell>
                  <TableCell align="center">{row['Total Matches']}</TableCell>
                  <TableCell align="center">{row['C Matches']}</TableCell>
                  <TableCell align="right">{row['VC Matches']}</TableCell>
@@ -273,12 +273,12 @@ export const Navbar =({user,updater,year,yearupdater})=>{
       </button>
       <div className="dropdown-content">
       <NavLink className='Navlink' style={{ margin: 10 }} to={`/manageteam`}>Team Management</NavLink>
-      <NavLink className='Navlink' style={{ margin: 10 }} to={`/login`}>Betting arena</NavLink>
+      <NavLink className='Navlink' style={{ margin: 10 }} to={`/betting/Match_1`}>Betting arena</NavLink>
       <button className='Navlink' style={{ margin: 10 }} onClick={handleLogout}>Logout</button>
       </div>
     </div> :<NavLink className='Navlink' style={{ margin: 10 }} to={`/login`}>Login</NavLink>}
     </nav>
-    {/* <h5 style={{fontSize:12, textAlign:'right',color:'white'}}>{time}</h5> */}
+    {/* <h5 style={{fontSize:12, textAlign:'right',color:'white'}}>{timebettin}</h5> */}
   </div> 
 
 }

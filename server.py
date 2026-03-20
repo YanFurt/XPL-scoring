@@ -31,6 +31,7 @@ overall_2026 = db_2026['Overall']
 live_status_2026 = db_2026['Live Status']
 players_2026=db_2026['Players']
 Squad_2026=db_2026['Squads']
+bets=db_2026['Bets']
 class dbmanager(): 
 
     def __init__(self,df1,df2,player_info,status_dict): 
@@ -115,13 +116,13 @@ def test_react():
     return HTMLResponse(content)
 
 
-@app.exception_handler(404)
-async def custom_404_handler(a,b):
-    return RedirectResponse("/2026")
+# @app.exception_handler(404)
+# async def custom_404_handler(a,b):
+#     return RedirectResponse("/2026")
 
-@app.exception_handler(405)
-async def custom_405_handler(a,b):
-    return RedirectResponse("/2026")
+# @app.exception_handler(405)
+# async def custom_405_handler(a,b):
+#     return RedirectResponse("/2026")
 
 @app.post('/update_df')
 async def getdata(key=Body(...)):
@@ -393,19 +394,29 @@ def sun_graph(award:str,year):
         values.append(int(j[award]))
     return {'labels':labels,'values':values,'parents':parents}
 
+@app.post('/bet/{match:str}')
+def load_wagers(match:str,user=Depends(verify_jwt_token)):
+        blst=bets.find({'Match_No': match.replace('_',' ')},{'Match_Description':1,
+                                                             'Match_No':1,
+        'Start_Time':1,
+        'Venue':1,
+        'Bets':1,
+        'Chances':1,
+        f"{user}_Bets":1}).to_list()[0]
+        blst['mybets']=blst[f"{user}_Bets"]
+        del blst[f"{user}_Bets"]
+        return blst
 
+@app.post('/setbet/{match:str}')
+async def load_wagers(request:Request,match:str,user=Depends(verify_jwt_token)):
+        payload = await request.json()
+        blst=bets.update_one({'Match_No': match.replace('_',' ')},{ "$set": { f"{user}_Bets": payload }})
+        return 'Success'
 
-#Detailed info on a single player
-def detailed_df(player):
-    df = dbm[year].df
-    return_df = df[df['Player']==player]
-    return return_df.to_dict(orient='records')
-
-def live_df():
-    live_data = list(live_status.find({}))
-    return pd.DataFrame(live_data).drop(columns={'_id'}).to_dict(orient='records')
 
 @app.get('/{year:str}/{path:path}',response_class=HTMLResponse)
 def test_react_fallback():
     content="""<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Xavier's Premier League</title><script defer="defer" src="/script/main.js"></script></head><body style="height: 95vh;"><div id="root" style="height: 100%;"></div></body></html>"""
     return HTMLResponse(content)
+
+

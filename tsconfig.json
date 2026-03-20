@@ -27,5 +27,5 @@
   "exclude": [
     "node_modules"
   ],
-  "include": ["src/*.tsx"]
+  "include": ["src/*.tsx", "src/bettingarena.jsx"]
 }

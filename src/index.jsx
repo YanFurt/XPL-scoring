@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route,Navigate} from "react-router";
 import {PointsTable,PlayerStat,AwardStat,Navbar,MiscStat, AuthForm} from './components.tsx'
 import './styles.css'
-
+import {BettingArena} from './bettingarena.jsx'
 import {SquadSelector} from './management.jsx'
 //import { response } from 'express';
 
@@ -11,7 +11,7 @@ const domNode = document.getElementById('root');
 const root = createRoot(domNode);
 
 async function validate_session() {
-  const host = window.location.origin 
+  const host = "http://127.0.0.1:8000" 
   //const host='http://127.0.0.1:8000'
   try {
     const response = await fetch(`${host}/validate_session`,{
@@ -59,6 +59,7 @@ function Container() {
       <Route path='/:year/stats/:endpoint' element={<MiscStat/>}></Route>
       <Route path='/login' element={<AuthForm updater={setUserIn}/>}></Route>
       <Route path='/manageteam' element={<SquadSelector/>}></Route>
+      <Route path='/betting/:match' element={<BettingArena/>}></Route>
       <Route path="*" element={<Navigate to={`/${fetchyear}`} replace />} />
       
     </Routes>

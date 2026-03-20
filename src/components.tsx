@@ -17,7 +17,7 @@ import './styles.css'
 const franchises = JSON.parse(process.env.FRANCHISES||"{}")
 
 async function getAucData(url:String) {
-  const host = "http://127.0.0.1:8000" 
+  const host = window.location.origin
   //const host='http://127.0.0.1:8000'
   try {
     const response = await fetch(`${host}/${url}`,{
@@ -36,7 +36,7 @@ async function getAucData(url:String) {
 }
 
 async function DoLogin(payload) {
-  const host = "http://127.0.0.1:8000" 
+  const host = window.location.origin
   //const host='http://127.0.0.1:8000'
   try {
     const response = await fetch(`${host}/login`,{
@@ -60,7 +60,7 @@ async function DoLogin(payload) {
 }
 
 async function DoLogout() {
-  const host = "http://127.0.0.1:8000" 
+  const host = window.location.origin
   //const host='http://127.0.0.1:8000'
   try {
     const response = await fetch(`${host}/logout`,{

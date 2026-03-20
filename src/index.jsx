@@ -11,7 +11,7 @@ const domNode = document.getElementById('root');
 const root = createRoot(domNode);
 
 async function validate_session() {
-  const host = "http://127.0.0.1:8000" 
+  const host = window.location.origin
   //const host='http://127.0.0.1:8000'
   try {
     const response = await fetch(`${host}/validate_session`,{

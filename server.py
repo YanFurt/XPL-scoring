@@ -116,13 +116,13 @@ def test_react():
     return HTMLResponse(content)
 
 
-# @app.exception_handler(404)
-# async def custom_404_handler(a,b):
-#     return RedirectResponse("/2026")
+@app.exception_handler(404)
+async def custom_404_handler(a,b):
+    return RedirectResponse("/2026")
 
-# @app.exception_handler(405)
-# async def custom_405_handler(a,b):
-#     return RedirectResponse("/2026")
+@app.exception_handler(405)
+async def custom_405_handler(a,b):
+    return RedirectResponse("/2026")
 
 @app.post('/update_df')
 async def getdata(key=Body(...)):

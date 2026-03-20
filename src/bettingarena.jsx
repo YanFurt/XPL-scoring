@@ -20,7 +20,7 @@ dayjs.extend(timezone)
 
 
 async function getBets(match) {
-  const host = "http://127.0.0.1:8000" 
+  const host = window.location.origin
   //const host='http://127.0.0.1:8000'
   try {
     const response = await fetch(`${host}/bet/${match.replace(' ','_')}`,{
@@ -41,7 +41,7 @@ async function getBets(match) {
 }
 
 async function setBets(match,body) {
-  const host = "http://127.0.0.1:8000" 
+  const host = window.location.origin
   //const host='http://127.0.0.1:8000'
   try {
     const response = await fetch(`${host}/setbet/${match.replace(' ','_')}`,{

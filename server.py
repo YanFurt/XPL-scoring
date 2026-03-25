@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, RedirectResponse,FileResponse,Response
 from security import verify_jwt_token,create_jwt_token,LoginReq
+from funcs import update_transfers
 
 from pymongo import MongoClient ,UpdateOne, UpdateMany
 import datetime as dt 
@@ -25,13 +26,14 @@ overall_2025 = db_2025['Overall']
 live_status_2025 = db_2025['Live Status']
 players_2025=db_2025['Players']
 
-user_db = client['XPL_Users'].users
+
 db_2026 = client['XPL_2026']
 overall_2026 = db_2026['Overall']
 live_status_2026 = db_2026['Live Status']
 players_2026=db_2026['Players']
-Squad_2026=db_2026['Squads']
+users_2026=db_2026['Squad Audit Trail']
 bets=db_2026['Bets']
+
 class dbmanager(): 
 
     def __init__(self,df1,df2,player_info,status_dict): 
@@ -156,14 +158,14 @@ async def login(response:Response,login_req:LoginReq):
             'c_change_history':[],
             'vc_changes':2,
             'vc_change_history':[]}
-        op=user_db.update_one({"username":login_req.user},{ '$setOnInsert': obj },upsert= True )
+        op=users_2026.update_one({"username":login_req.user},{ '$setOnInsert': obj },upsert= True )
         response.set_cookie(key='XPL',value=create_jwt_token(login_req.user),httponly=True,secure=True,samesite="none")
         if op.did_upsert:
             return {'Status':'Success','User':login_req.user}
         else:
             return {'Status':'User exists'}
     else:
-        pwd = user_db.find_one({'username':login_req.user,'password':login_req.password})
+        pwd = users_2026.find_one({'username':login_req.user,'password':login_req.password})
         
         if pwd:
             response.set_cookie(key='XPL',value=create_jwt_token(login_req.user),httponly=True,secure=True,samesite="none")
@@ -189,28 +191,7 @@ async def validate_session(user=Depends(verify_jwt_token)):
 @app.post('/updateteam')
 async def update_team(request:Request,user=Depends(verify_jwt_token)):
     payload = await request.json()
-    operations = []
-    cap_change = payload.get("cap_change")
-    if cap_change:
-        operations.append(UpdateOne(filter={ "Player": cap_change[1] },
-                    update={ "$set": { "Captain": False }}))
-        
-        operations.append(UpdateOne(filter={ "Player": cap_change[0] },
-                update={ "$set": { "Captain": True }}))
-    vcap_change = payload.get("vcap_change")
-    if vcap_change:
-        operations.append(UpdateOne(filter={ "Player": vcap_change[0] },
-                    update={ "$set": { "Vice_Captain": True }}))
-        
-        operations.append(UpdateOne(filter={ "Player": vcap_change[1] },
-                update={ "$set": { "Vice_Captain": False }}))
-    if transferin:=payload.get("in"):
-        operations.append(UpdateMany(filter={"Player":{"$in":transferin}},
-                        update={ "$set": { "Bench": False }}))
-    if transferout:=payload.get("out"):
-        operations.append(UpdateMany(filter={"Player":{"$in":transferout}},
-                        update={ "$set": { "Bench": True }}))  
-    Squad_2026.bulk_write(requests=operations)
+    status = update_transfers(overall_2026,users_2026,user,payload)
     return 'Success'
 
 
@@ -336,7 +317,7 @@ def status(year):
 def current_squad(year):
     if year=='2026':
         
-        df = pd.DataFrame(Squad_2026.find({'Team':{"$in":list(players.keys())}}).to_list())
+        df = pd.DataFrame(users_2026.find({'Team':{"$in":list(players.keys())}},{'Team':1,	'Player':1,	"IPL_Team":1,'Base_Matches':1,'Bench':1,'Captain':1,'Vice_Captain':1}).to_list())
         df=df[['Team','Player','Bench','Captain','Vice_Captain']].sort_values(['Captain','Vice_Captain','Bench'],ascending=[False,False,True])
         df['Player'] = df['Player']+np.where(df['Bench'],' (B)','')+np.where(df['Captain'],' (C)','')+np.where(df['Vice_Captain'],' (VC)','')
         return_df = df.groupby(['Team'])['Player'].apply(list).apply(pd.Series).reset_index()
@@ -356,12 +337,15 @@ def current_squad(year):
 #Current squad in team sheet format
 @app.post('/teamdata')
 def my_squad(user=Depends(verify_jwt_token)):
-    print(user)
-    df = pd.DataFrame(Squad_2026.find({"Team":user}).to_list())
-    print(df)
-    df=df[['Player','Bench','Captain','Vice_Captain']]
+
+    df = overall_2026.find({"Team":user},{'_id':1,	'Player':1,	"IPL_Team":1,'Team_Matches':1,'Bench':1,'Captain':1,'Vice_Captain':1}).to_list()
+    #print(df)
+    #df=df[['Player','Bench','Captain','Vice_Captain']]
     #return_df = return_df.reindex(sorted(df_filtered['Team'].unique()),axis=1)
-    return df.to_dict(orient='records')
+    lst = users_2026.find({'username':user}).to_list()[0]
+    transfer_limits={'transfers':5-len(lst['transfer_history']), 'cap':2-len(lst['c_change_history']),'vcap':2-len(lst['vc_change_history'])}
+    return {"teamdata":df,'limits':transfer_limits}
+
 
 @app.post('/{year:str}/graph/{team}/pie')
 def pie_graph(team:str,year):

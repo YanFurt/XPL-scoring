@@ -7,7 +7,7 @@ import {
   MenuItem,
   Typography,
 Paper,
-TextField,Button
+TextField,Button,Dialog,DialogActions,DialogContent,DialogTitle
 } from "@mui/material";
 import Grid from "@mui/material/Grid2";
 import dayjs from 'dayjs'
@@ -32,7 +32,7 @@ async function getBets(match) {
     }
     
     const data = await response.text();
-    //console.log(data)
+    console.log(data)
     return JSON.parse(data)
     //console.log(json);   i
   } catch (error) {
@@ -96,14 +96,14 @@ const TextInputGrid = ({ matchobj }) => {
   const [inputs, setInputs] = useState(matchobj?.mybets||{});
   const [deadline,setDeadline]=useState(false)
   const [matchStart,setMatchStart]=useState(null)
+  const [open,setOpen] = useState(false)
 
   useEffect(()=>{
     
     const d1 = dayjs.tz(matchobj.Start_Time, "Asia/Kolkata");
-    console.log('d1',d1.format())
     setDeadline(d1.isBefore(dayjs().tz('Asia/Kolkata')))
     setMatchStart(d1.toDate())
-    
+    setInputs(matchobj?.mybets||{})
   },[matchobj])
   
 
@@ -113,12 +113,19 @@ const TextInputGrid = ({ matchobj }) => {
 
   const total = getTotal(inputs);
   const handleChange = (key, value) => {
+
+    const integerRegex = /^[0-9]*$/;
+
+
     if (value === "") {
     setInputs((prev) => ({
       ...prev,
       [key]: "",
     }));
     return;
+    }
+    if (!integerRegex.test(value)){
+      return
     }
     const numericValue = Number(value);
 
@@ -136,12 +143,20 @@ const TextInputGrid = ({ matchobj }) => {
   const handleConfirm = async ()=>{
   console.log(inputs)
   const status = await setBets(matchobj.Match_No,inputs);
+  setOpen(true)
+  return
+  
+}
+
+  const handleClose = async ()=>{
+  
+  setOpen(false)
   return
   
 }
 
   console.log('ms',matchStart)
-
+  console.log(inputs)
   return (<div>
     <h1>{matchobj?.Match_Description}</h1>
     <h3>{matchobj?.Venue}</h3>
@@ -184,7 +199,7 @@ const TextInputGrid = ({ matchobj }) => {
             <Paper sx={{ p: 2 }}>
               <TextField
                 fullWidth
-                type="number"
+                type="text" // Use type="text" for better control
                 label="Your Bet"
                 value={inputs[key]}
                 onChange={(e) =>
@@ -205,6 +220,18 @@ const TextInputGrid = ({ matchobj }) => {
           >
             Submit
     </Button>
+    <Dialog open={open} onClose={handleClose}>
+        <DialogTitle>Confirmation</DialogTitle>
+        <DialogContent>
+          Your bet has been submitted
+        </DialogContent>
+
+        <DialogActions>
+          <Button onClick={handleClose} color="primary" variant="contained">
+            Understood
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };

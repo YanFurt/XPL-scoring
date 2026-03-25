@@ -48,7 +48,7 @@ function SortableElement({ player, containerId }) {
     transition,
     isDragging
   } = useSortable({
-    id: player.Player,
+    id: player._id,
     data: { containerId }
   });
 
@@ -69,7 +69,7 @@ function SortableElement({ player, containerId }) {
       }}
       style={style}
     >
-      {player.Player}
+      {`${player.Player} (${player.Team_Matches})`}
     </Paper>
   );
 }
@@ -107,12 +107,12 @@ function SortableContainer({ containerId, elements }) {
       },...style}}
     >
       <SortableContext
-        items={elements.map(p => p.Player)}
+        items={elements.map(p => p._id)}
         strategy={rectSortingStrategy}
       >
         {elements.map((player, index) => (
           <SortableElement
-            key={player.Player}
+            key={player._id}
             player={player}
             containerId={containerId}
           />
@@ -122,20 +122,20 @@ function SortableContainer({ containerId, elements }) {
   );
 }
 
-function generateBenchLogs(original,newbench,updater){
+function generateBenchLogs(original,newbench,updater,lookup){
  
 
   if (original.size ==0){
     updater({out:newbench,in:[]})
-    return newbench.map(p=>`You added ${p} to the bench`)
+    return newbench.map(p=>`You added ${lookup[p].Player} to the bench`)
   }
   else{
     const set = new Set(newbench)
     const out_players = Array.from(set.difference(original))
     const in_players=Array.from(original.difference(set))||[]
-
+    
     updater({in:in_players,out:out_players})
-    return in_players.length>0?in_players.map((c,i)=>`You transferred in ${c} for ${out_players[i]}`):[]
+    return in_players.length>0?in_players.map((c,i)=>`You transferred in ${lookup[c].Player} for ${lookup[out_players[i]].Player}`):[]
   }
 }
 
@@ -162,6 +162,71 @@ async function getTeam() {
   }
 }
 
+function displayMsg(payload,lookup,limits) {
+  
+  const inplayers = payload?.in
+  const outplayers = payload?.out
+  const caps = payload?.cap_change
+  const vcaps = payload?.vcap_change
+  let caplog='';
+  let vcaplog='';
+  let caplog2='';
+  let vcaplog2='';
+
+
+  const transfer_delays = inplayers.map( (value, index) =>
+              { const diff=lookup[outplayers[index]].Matches-lookup[value].Matches;
+                if (diff>0){
+                  return `${lookup[value].Player} will start scoring after ${diff} matches`
+                }
+                else {
+                  return ''
+                }
+              } );
+
+  if (caps){
+  const diff=lookup[caps[1]].Matches-lookup[caps[0]].Matches;
+  if (diff>0){
+    caplog= `\n${lookup[caps[0]].Player} will start captaining after ${diff} matches`
+  }
+}
+
+if (vcaps){
+  
+  const diff=lookup[vcaps[1]].Matches-lookup[vcaps[0]].Matches;
+  if (diff>0){
+    vcaplog= `\n${lookup[vcaps[0]].Player} will start vice-captaining after ${diff} matches`
+  }
+}
+
+const transfer_costs=inplayers.map( (value, index) =>
+              { const penalty=30*+(limits.transfers-index-1<0)+Math.max(5*(index-limits.transfers),0);
+                if (penalty>0){
+                  return `${lookup[value].Player} will cost ${penalty} per match due to transfer limit`
+                }
+                else {
+                  return ''
+                }
+              } );
+
+if (caps){
+  const penalty=60*+(limits.cap-1<0)+Math.max(10*(limits.cap),0);
+  if (penalty>0){
+    caplog2= `\n${lookup[caps[0]].Player} will cost ${penalty} per match due to captain change limit`
+  }
+}
+
+if (vcaps){
+  
+  const penalty=45*+(limits.vcap-1<0)+Math.max(7.5*(limits.vcap),0)
+  if (penalty>0){
+    vcaplog2= `\n${lookup[vcaps[0]].Player} will cost ${penalty} per match due to vc change limit`
+  }
+}
+
+return transfer_delays.filter(i=>!!i).join('\n')+caplog+vcaplog+transfer_costs.filter(i=>!!i).join('\n')+caplog2+vcaplog2
+
+}
 async function setTeamState(body) {
   const host = window.location.origin
   //const host='http://127.0.0.1:8000'
@@ -206,9 +271,12 @@ export  function SquadSelector() {
   const [originalbench,setOriginalBench]=useState(new Set())
   const [benchlogs,setBenchlogs]=useState([])
   const [substitutions,setSubstitutions] = useState({})
+  const [lookup,setLookup] = useState({})
   
   const [open,setOpen]=useState(false)
   const [payload,setPayload] = useState({in:[],out:[]})
+  const [quota,setQuota]=useState({})
+
   const sensors = useSensors(
     useSensor(MouseSensor, {
       activationConstraint: { distance: 5 }
@@ -221,24 +289,28 @@ export  function SquadSelector() {
   
   useEffect( ()=>{ 
       (async () => {
-        const users = await getTeam();
-        const cap=users.find(p=>p.Captain)||{}
-        const vcap=users.find(p=>p.Vice_Captain)||{}
-        const bench = users.filter(p => p.Bench);
+        const {teamdata,limits} = await getTeam();
+        const cap=teamdata.find(p=>p.Captain)||{}
+        const vcap=teamdata.find(p=>p.Vice_Captain)||{}
+        const bench = teamdata.filter(p => p.Bench);
         
-        setPlayers(users);
-        setTeam(users.filter(p => !p.Bench));
+        setPlayers(teamdata);
+        setTeam(teamdata.filter(p => !p.Bench));
         setBench(bench);
-        setCaptain(cap.Player||"");
-        setViceCaptain(vcap.Player||"")
+        setCaptain(cap._id||"");
+        setViceCaptain(vcap._id||"")
         setOriginal({cap,vcap})
-        setOriginalBench(new Set(bench.map(p=>p.Player)))
+        setOriginalBench(new Set(bench.map(p=>p._id)))
+        setQuota(limits)
+        setLookup(Object.fromEntries(
+        teamdata.map(obj => [obj._id,{Player:obj.Player, Matches:obj.Team_Matches}])
+        ))
       })();}
       ,[])
 
   useEffect(()=>{
 
-    const logs=generateBenchLogs(originalbench,bench.map(p=>p.Player),setSubstitutions)
+    const logs=generateBenchLogs(originalbench,bench.map(p=>p._id),setSubstitutions,lookup)
 
     setBenchlogs(logs)
   },[bench])
@@ -249,8 +321,8 @@ export  function SquadSelector() {
 
     setCaptain(value);
 
-    if (value!=originalleaders.cap?.Player){
-      setCaplog(`You changed the captain to ${value}`)
+    if (value!=originalleaders.cap?._id){
+      setCaplog(`You changed the captain to ${lookup[value].Player}`)
     }
     else {
       setCaplog("")
@@ -260,30 +332,30 @@ export  function SquadSelector() {
     if (value === viceCaptain) {
       setViceCaptain("");
       setVcaplog("You removed the vice-captain")
-      setTeam(team.map((c) =>  c.Player == value?{...c,Captain:true,Vice_Captain:false}:c ));
+      setTeam(team.map((c) =>  c._id == value?{...c,Captain:true,Vice_Captain:false}:c ));
       return
     } 
-    setTeam(team.map((c) =>  c.Player == value?{...c,Captain:true}:{...c,Captain:false} ));
+    setTeam(team.map((c) =>  c._id == value?{...c,Captain:true}:{...c,Captain:false} ));
   };
 
   const handleViceCaptainChange = (event) => {
     const value = event.target.value;
     setViceCaptain(value);
-    setTeam(team.map((c) =>  c.Player == value?{...c,Vice_Captain:true}:{...c,Vice_Captain:false} ));
+    setTeam(team.map((c) =>  c._id == value?{...c,Vice_Captain:true}:{...c,Vice_Captain:false} ));
     
-    if (value!=originalleaders.vcap?.Player){
-      setVcaplog(`You changed the vice-captain to ${value}`)
+    if (value!=originalleaders.vcap?._id){
+      setVcaplog(`You changed the vice-captain to ${lookup[value].Player}`)
     }
     else {
       setVcaplog("")
     }
     if (value === captain) {
       setCaptain("");
-      setTeam(team.map((c) =>  c.Player == value?{...c,Vice_Captain:true,Captain:false}:c ));
+      setTeam(team.map((c) =>  c._id == value?{...c,Vice_Captain:true,Captain:false}:c ));
       setCaplog("You removed the Captain")
       return
   };
-  setTeam(team.map((c) =>  c.Player == value?{...c,Vice_Captain:true}:{...c,Vice_Captain:false} ));}
+  setTeam(team.map((c) =>  c._id == value?{...c,Vice_Captain:true}:{...c,Vice_Captain:false} ));}
   
 
   function handleDragStart(event) {
@@ -303,14 +375,14 @@ export  function SquadSelector() {
   
   if (from === to) {
     if (from === "Bench") {
-      const oldIndex = bench.findIndex(p => p.Player === activeid);
-      const newIndex = bench.findIndex(p => p.Player === overId);
+      const oldIndex = bench.findIndex(p => p._id === activeid);
+      const newIndex = bench.findIndex(p => p._id === overId);
       setBench(arrayMove(bench, oldIndex, newIndex));
     }
 
     if (from === "Team") {
-      const oldIndex = team.findIndex(p => p.Player === activeid);
-      const newIndex = team.findIndex(p => p.Player === overId);
+      const oldIndex = team.findIndex(p => p._id === activeid);
+      const newIndex = team.findIndex(p => p._id === overId);
       setTeam(arrayMove(team, oldIndex, newIndex));
     }
 
@@ -319,14 +391,14 @@ export  function SquadSelector() {
 
   // TEAM → BENCH
   if (from === "Team" && to === "Bench") {
-    const player = team.find(p => p.Player === activeid);
+    const player = team.find(p => p._id === activeid);
     if (player.Captain || player.Vice_Captain) return;
 
     if (bench.length === MAX_BENCH && overId!=='Bench'){
-        const swap = bench.find(p => p.Player === overId)
+        const swap = bench.find(p => p._id === overId)
         
-        setTeam(team.map((c) =>  c.Player == activeid?{...swap,Bench:false}:c ));
-        setBench(bench.map((c) =>  c.Player == overId? {...player,Bench:true}:c ));
+        setTeam(team.map((c) =>  c._id == activeid?{...swap,Bench:false}:c ));
+        setBench(bench.map((c) =>  c._id == overId? {...player,Bench:true}:c ));
         return
     };
 
@@ -334,28 +406,28 @@ export  function SquadSelector() {
 
     
 
-    setTeam(team.filter(p => p.Player !== activeid));
+    setTeam(team.filter(p => p._id !== activeid));
     setBench([...bench, { ...player, Bench: true }]);
   }
 
   // BENCH → TEAM
   if (from === "Bench" && to === "Team") {
-    const player = bench.find(p => p.Player === activeid);
-    const swap = team.find(p => p.Player === overId)
+    const player = bench.find(p => p._id === activeid);
+    const swap = team.find(p => p._id === overId)
     if (swap.Captain||swap.Vice_Captain) return    
-    setTeam(team.map((c) =>  c.Player == overId?{...player,Bench:false}:c ));
-    setBench(bench.map((c) =>  c.Player == activeid? {...swap,Bench:true}:c ));
+    setTeam(team.map((c) =>  c._id == overId?{...player,Bench:false}:c ));
+    setBench(bench.map((c) =>  c._id== activeid? {...swap,Bench:true}:c ));
 
   }
 };
 
 const handleSubmit = ()=>{
   const temppayload = {}
-  if (originalleaders.cap?.Player !== captain){
-      temppayload.cap_change = [captain,originalleaders.cap?.Player]
+  if (originalleaders.cap?._id !== captain){
+      temppayload.cap_change = [captain,originalleaders.cap?._id]
   }
-  if (originalleaders.vcap?.Player !==viceCaptain){
-      temppayload.vcap_change = [viceCaptain,originalleaders.vcap?.Player]
+  if (originalleaders.vcap?._id !==viceCaptain){
+      temppayload.vcap_change = [viceCaptain,originalleaders.vcap?._id]
   }
   const finalpayload = {...temppayload,...substitutions}
   console.log(finalpayload)
@@ -396,7 +468,7 @@ const handleConfirm = async ()=>{
             <TableRow>
                 <TableCell>
                 <Typography fontWeight={500}>
-                    {activeId}
+                    {lookup[activeId].Player}
                 </Typography>
                 </TableCell>
             </TableRow>
@@ -420,7 +492,7 @@ const handleConfirm = async ()=>{
             onChange={handleCaptainChange}
           >
             {team.map((option) => {
-              const value = option.Player ?? option;
+              const value = option._id ?? option;
               const label = option.Player ?? option;
 
               return (
@@ -445,7 +517,7 @@ const handleConfirm = async ()=>{
             onChange={handleViceCaptainChange}
           >
             {team.map((option) => {
-              const value = option.Player ?? option;
+              const value = option._id ?? option;
               const label = option.Player ?? option;
 
               return (
@@ -521,10 +593,11 @@ const handleConfirm = async ()=>{
         <DialogTitle>Summary</DialogTitle>
         <DialogContent>
           <Typography sx={{ whiteSpace: 'pre-wrap' }}>
-            {payload.in.length? `In: ${payload.in.join(', ')}\n\n`:'' }
-            {payload.out.length>0? `Out: ${payload.out.join(', ')}\n\n`:'' }
+            {payload.in.length? `In: ${payload.in.map(i=>lookup[i].Player).join(', ')}\n\n`:'' }
+            {payload.out.length>0? `Out: ${payload.out.map(i=>lookup[i].Player).join(', ')}\n\n`:'' }
             {caplog?`${caplog}\n\n`:""}
             {vcaplog?`${vcaplog}\n\n`:""}
+            {displayMsg(payload,lookup,quota)}
           </Typography>
           <br></br>
           <Typography>

@@ -1,0 +1,162 @@
+{
+    "1527674": {
+        "title": "1st Match",
+        "home_team": "RCB",
+        "away_team": "SRH",
+        "start_time": "2026-03-28 19:30",
+        "venue": "M Chinnaswamy Stadium, Bengaluru",
+        "slug": "royal-challengers-bengaluru-vs-sunrisers-hyderabad-1st-match-1527674"
+    },
+    "1527675": {
+        "title": "2nd Match",
+        "home_team": "MI",
+        "away_team": "KKR",
+        "start_time": "2026-03-29 19:30",
+        "venue": "Wankhede Stadium, Mumbai",
+        "slug": "mumbai-indians-vs-kolkata-knight-riders-2nd-match-1527675"
+    },
+    "1527676": {
+        "title": "3rd Match",
+        "home_team": "RR",
+        "away_team": "CSK",
+        "start_time": "2026-03-30 19:30",
+        "venue": "Barsapara Cricket Stadium, Guwahati",
+        "slug": "rajasthan-royals-vs-chennai-super-kings-3rd-match-1527676"
+    },
+    "1527677": {
+        "title": "4th Match",
+        "home_team": "PBKS",
+        "away_team": "GT",
+        "start_time": "2026-03-31 19:30",
+        "venue": "Maharaja Yadavindra Singh International Cricket Stadium, New Chandigarh",
+        "slug": "punjab-kings-vs-gujarat-titans-4th-match-1527677"
+    },
+    "1527678": {
+        "title": "5th Match",
+        "home_team": "LSG",
+        "away_team": "DC",
+        "start_time": "2026-04-01 19:30",
+        "venue": "Bharat Ratna Shri Atal Bihari Vajpayee Ekana Cricket Stadium, Lucknow",
+        "slug": "lucknow-super-giants-vs-delhi-capitals-5th-match-1527678"
+    },
+    "1527679": {
+        "title": "6th Match",
+        "home_team": "KKR",
+        "away_team": "SRH",
+        "start_time": "2026-04-02 19:30",
+        "venue": "Eden Gardens, Kolkata",
+        "slug": "kolkata-knight-riders-vs-sunrisers-hyderabad-6th-match-1527679"
+    },
+    "1527680": {
+        "title": "7th Match",
+        "home_team": "CSK",
+        "away_team": "PBKS",
+        "start_time": "2026-04-03 19:30",
+        "venue": "MA Chidambaram Stadium, Chepauk, Chennai",
+        "slug": "chennai-super-kings-vs-punjab-kings-7th-match-1527680"
+    },
+    "1527681": {
+        "title": "8th Match",
+        "home_team": "DC",
+        "away_team": "MI",
+        "start_time": "2026-04-04 15:30",
+        "venue": "Arun Jaitley Stadium, Delhi",
+        "slug": "delhi-capitals-vs-mumbai-indians-8th-match-1527681"
+    },
+    "1527682": {
+        "title": "9th Match",
+        "home_team": "GT",
+        "away_team": "RR",
+        "start_time": "2026-04-04 19:30",
+        "venue": "Narendra Modi Stadium, Ahmedabad",
+        "slug": "gujarat-titans-vs-rajasthan-royals-9th-match-1527682"
+    },
+    "1527683": {
+        "title": "10th Match",
+        "home_team": "SRH",
+        "away_team": "LSG",
+        "start_time": "2026-04-05 15:30",
+        "venue": "Rajiv Gandhi International Stadium, Uppal, Hyderabad",
+        "slug": "sunrisers-hyderabad-vs-lucknow-super-giants-10th-match-1527683"
+    },
+    "1527684": {
+        "title": "11th Match",
+        "home_team": "RCB",
+        "away_team": "CSK",
+        "start_time": "2026-04-05 19:30",
+        "venue": "M Chinnaswamy Stadium, Bengaluru",
+        "slug": "royal-challengers-bengaluru-vs-chennai-super-kings-11th-match-1527684"
+    },
+    "1527685": {
+        "title": "12th Match",
+        "home_team": "KKR",
+        "away_team": "PBKS",
+        "start_time": "2026-04-06 19:30",
+        "venue": "Eden Gardens, Kolkata",
+        "slug": "kolkata-knight-riders-vs-punjab-kings-12th-match-1527685"
+    },
+    "1527686": {
+        "title": "13th Match",
+        "home_team": "RR",
+        "away_team": "MI",
+        "start_time": "2026-04-07 19:30",
+        "venue": "Barsapara Cricket Stadium, Guwahati",
+        "slug": "rajasthan-royals-vs-mumbai-indians-13th-match-1527686"
+    },
+    "1527687": {
+        "title": "14th Match",
+        "home_team": "DC",
+        "away_team": "GT",
+        "start_time": "2026-04-08 19:30",
+        "venue": "Arun Jaitley Stadium, Delhi",
+        "slug": "delhi-capitals-vs-gujarat-titans-14th-match-1527687"
+    },
+    "1527688": {
+        "title": "15th Match",
+        "home_team": "KKR",
+        "away_team": "LSG",
+        "start_time": "2026-04-09 19:30",
+        "venue": "Eden Gardens, Kolkata",
+        "slug": "kolkata-knight-riders-vs-lucknow-super-giants-15th-match-1527688"
+    },
+    "1527689": {
+        "title": "16th Match",
+        "home_team": "RR",
+        "away_team": "RCB",
+        "start_time": "2026-04-10 19:30",
+        "venue": "Barsapara Cricket Stadium, Guwahati",
+        "slug": "rajasthan-royals-vs-royal-challengers-bengaluru-16th-match-1527689"
+    },
+    "1527690": {
+        "title": "17th Match",
+        "home_team": "PBKS",
+        "away_team": "SRH",
+        "start_time": "2026-04-11 15:30",
+        "venue": "Maharaja Yadavindra Singh International Cricket Stadium, New Chandigarh",
+        "slug": "punjab-kings-vs-sunrisers-hyderabad-17th-match-1527690"
+    },
+    "1527691": {
+        "title": "18th Match",
+        "home_team": "CSK",
+        "away_team": "DC",
+        "start_time": "2026-04-11 19:30",
+        "venue": "MA Chidambaram Stadium, Chepauk, Chennai",
+        "slug": "chennai-super-kings-vs-delhi-capitals-18th-match-1527691"
+    },
+    "1527692": {
+        "title": "19th Match",
+        "home_team": "LSG",
+        "away_team": "GT",
+        "start_time": "2026-04-12 15:30",
+        "venue": "Bharat Ratna Shri Atal Bihari Vajpayee Ekana Cricket Stadium, Lucknow",
+        "slug": "lucknow-super-giants-vs-gujarat-titans-19th-match-1527692"
+    },
+    "1527693": {
+        "title": "20th Match",
+        "home_team": "MI",
+        "away_team": "RCB",
+        "start_time": "2026-04-12 19:30",
+        "venue": "Wankhede Stadium, Mumbai",
+        "slug": "mumbai-indians-vs-royal-challengers-bengaluru-20th-match-1527693"
+    }
+}

@@ -185,7 +185,7 @@ function displayMsg(payload,lookup,limits) {
               } );
 
   if (caps){
-  const diff=lookup[caps[1]].Matches-lookup[caps[0]].Matches;
+  const diff=lookup[caps[1]]?.Matches||0-lookup[caps[0]]?.Matches||0;
   if (diff>0){
     caplog= `\n${lookup[caps[0]].Player} will start captaining after ${diff} matches`
   }
@@ -193,7 +193,7 @@ function displayMsg(payload,lookup,limits) {
 
 if (vcaps){
   
-  const diff=lookup[vcaps[1]].Matches-lookup[vcaps[0]].Matches;
+  const diff=lookup[vcaps[1]]?.Matches||0-lookup[vcaps[0]]?.Matches||0;
   if (diff>0){
     vcaplog= `\n${lookup[vcaps[0]].Player} will start vice-captaining after ${diff} matches`
   }

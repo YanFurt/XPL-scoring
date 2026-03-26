@@ -210,7 +210,7 @@ const transfer_costs=inplayers.map( (value, index) =>
               } );
 
 if (caps){
-  const penalty=60*+(limits.cap-1<0)+Math.max(10*(limits.cap),0);
+  const penalty=60*+(limits.cap-1<0)-Math.max(10*(-limits.cap),0);
   if (penalty>0){
     caplog2= `\n${lookup[caps[0]].Player} will cost ${penalty} per match due to captain change limit`
   }
@@ -218,7 +218,7 @@ if (caps){
 
 if (vcaps){
   
-  const penalty=45*+(limits.vcap-1<0)+Math.max(7.5*(limits.vcap),0)
+  const penalty=45*+(limits.vcap-1<0)-Math.max(7.5*(-limits.vcap),0)
   if (penalty>0){
     vcaplog2= `\n${lookup[vcaps[0]].Player} will cost ${penalty} per match due to vc change limit`
   }

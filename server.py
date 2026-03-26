@@ -344,6 +344,7 @@ def my_squad(user=Depends(verify_jwt_token)):
     #return_df = return_df.reindex(sorted(df_filtered['Team'].unique()),axis=1)
     lst = users_2026.find({'username':user}).to_list()[0]
     transfer_limits={'transfers':5-len(lst['transfer_history']), 'cap':2-len(lst['c_change_history']),'vcap':2-len(lst['vc_change_history'])}
+    print(transfer_limits)
     return {"teamdata":df,'limits':transfer_limits}
 
 

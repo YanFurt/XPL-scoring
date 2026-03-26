@@ -37,6 +37,7 @@ def update_transfers(overall_db,audit_db,player,dct):
             
             playerout=outl[i]
             mpout,franchiseout=transfer_games[playerout]
+            outgoing_remove_ids=get_match_ids(franchiseout)
             try:
                 playerin=inl[i]
                 mpin,franchisein=transfer_games[playerin]
@@ -48,7 +49,7 @@ def update_transfers(overall_db,audit_db,player,dct):
                 
                 
         
-                outgoing_remove_ids=get_match_ids(franchiseout)
+                
                 overall_mongoupdate_objects.append(UpdateOne(filter={ "_id": playerout },
                             update={ "$set": { "Bench": True }, '$pullAll': { 'Valid_Matches_List': [int(i) for i in outgoing_remove_ids] } }))
             
@@ -71,8 +72,10 @@ def update_transfers(overall_db,audit_db,player,dct):
         
         playerin=cap_change[0]
         playerout=cap_change[1]
+        if playerout is None:
+            playerout=''
         mpin,franchisein=cap_games[playerin]
-        mpout,franchiseout=cap_games[playerout]
+        mpout,franchiseout=cap_games.get(playerout,(0,''))
         incoming_valid_games = 14-mpout
 
         new_incoming_valid_ids=get_match_ids(franchisein, incoming_valid_games)
@@ -91,8 +94,11 @@ def update_transfers(overall_db,audit_db,player,dct):
         
         playerin=vcap_change[0]
         playerout=vcap_change[1]
+
+        if playerout is None:
+            playerout=''
         mpin,franchisein=vcap_games[playerin]
-        mpout,franchiseout=vcap_games[playerout]
+        mpout,franchiseout=vcap_games.get(playerout,(0,''))
         incoming_valid_games = 14-mpout
 
         new_incoming_valid_ids=get_match_ids(franchisein, incoming_valid_games)

@@ -317,7 +317,7 @@ def status(year):
 def current_squad(year):
     if year=='2026':
         
-        df = pd.DataFrame(users_2026.find({'Team':{"$in":list(players.keys())}},{'Team':1,	'Player':1,	"IPL_Team":1,'Base_Matches':1,'Bench':1,'Captain':1,'Vice_Captain':1}).to_list())
+        df = pd.DataFrame(overall_2026.find({'Team':{"$in":list(players.keys())}},{'Team':1,	'Player':1,	"IPL_Team":1,'Base_Matches':1,'Bench':1,'Captain':1,'Vice_Captain':1}).to_list())
         df=df[['Team','Player','Bench','Captain','Vice_Captain']].sort_values(['Captain','Vice_Captain','Bench'],ascending=[False,False,True])
         df['Player'] = df['Player']+np.where(df['Bench'],' (B)','')+np.where(df['Captain'],' (C)','')+np.where(df['Vice_Captain'],' (VC)','')
         return_df = df.groupby(['Team'])['Player'].apply(list).apply(pd.Series).reset_index()

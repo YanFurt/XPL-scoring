@@ -2,7 +2,6 @@ import pandas as pd
 from cricdata import CricinfoClient
 from pymongo import MongoClient
 import json
-import yaml
 import datetime as dt
 import pytz
 from dotenv import load_dotenv

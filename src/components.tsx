@@ -1,6 +1,6 @@
 import React,{ useEffect,  useState } from 'react';
 import Plot from 'react-plotly.js';
-import {useParams,NavLink,redirect} from 'react-router'
+import {useParams,NavLink} from 'react-router'
 import { useNavigate } from 'react-router-dom';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';

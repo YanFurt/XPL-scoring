@@ -7,7 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, RedirectResponse,FileResponse,Response
 from security import verify_jwt_token,create_jwt_token,LoginReq
-from funcs import update_transfers
+from funcs import update_transfers,schedf
+from scoring import live_match_scoring
 
 from pymongo import MongoClient ,UpdateOne, UpdateMany
 import datetime as dt 
@@ -106,6 +107,7 @@ app = FastAPI()
 app.add_middleware(CORSMiddleware,allow_origins=['http://localhost:3000'],allow_methods=['GET','POST','OPTIONS'],allow_credentials=True)
 
 app.mount('/script',StaticFiles(directory="dist"), name="static")
+app.mount('/guide',StaticFiles(directory="guide"), name="guide")
 
 @app.get('/favicon.ico', include_in_schema=False)
 async def favicon():
@@ -199,11 +201,14 @@ async def update_team(request:Request,user=Depends(verify_jwt_token)):
 #Fantasy points table
 @app.post('/{year:str}/standings')
 def points_df(year):
+    
     df = dbm[year].df
     print(df.columns)
     return_df = df[(df['Team']!='Unsold')&(df['Team']!='')].groupby(['Team'])[['Total Points','Total Matches','C Matches','VC Matches']].sum().\
                 sort_values(by=['Total Points','Total Matches'],ascending=[False,True]).reset_index()
     return return_df.to_dict(orient='records')
+    
+
 
 @app.get('/updatename')
 def rename_player(capi,cinfo):
@@ -381,6 +386,9 @@ def sun_graph(award:str,year):
 
 @app.post('/bet/{match:str}')
 def load_wagers(match:str,user=Depends(verify_jwt_token)):
+
+        if match=='current':
+            match=schedf.loc[pd.Timestamp.now():].iloc[0]['Match Number']
         blst=bets.find({'Match_No': match.replace('_',' ')},{'Match_Description':1,
                                                              'Match_No':1,
         'Start_Time':1,

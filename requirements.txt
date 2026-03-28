@@ -5,3 +5,4 @@ uvicorn
 pandas
 dotenv
 PyJWT
+cricdata

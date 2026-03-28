@@ -7,9 +7,10 @@ import {
   MenuItem,
   Typography,
 Paper,
-TextField,Button,Dialog,DialogActions,DialogContent,DialogTitle
+TextField,Button,Dialog,DialogActions,DialogContent,DialogTitle, Tooltip, Link, 
 } from "@mui/material";
-import Grid from "@mui/material/Grid2";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
+import Grid from "@mui/material/Grid";
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
 import timezone from 'dayjs/plugin/timezone'
@@ -21,7 +22,7 @@ dayjs.extend(timezone)
 
 async function getBets(match) {
   const host = window.location.origin
-  //const host='http://127.0.0.1:8000'
+  //const host = window.location.origin
   try {
     const response = await fetch(`${host}/bet/${match.replace(' ','_')}`,{
       method: "POST",
@@ -40,9 +41,46 @@ async function getBets(match) {
   }
 }
 
+const HowItWorksTooltip = () => {
+  return (
+    <Box display="flex" justifyContent="center" mt={4}>
+      <Tooltip
+        arrow
+        placement="top"
+        title={
+          <Typography variant="body2">
+            Learn more{" "}
+            <Link
+              href="/guide/guide.pdf#page=7"
+              target="_blank"
+              rel="noopener noreferrer"
+              sx={{ color: "#fff" }} 
+            >
+              here
+            </Link>
+          </Typography>
+        }
+      >
+        <Box
+          display="inline-flex"
+          alignItems="center"
+          gap={0.5}
+          sx={{ cursor: "pointer" }}
+        >
+          <Typography variant="body2">
+            How does it work?
+          </Typography>
+          <HelpOutlineIcon fontSize="small" />
+        </Box>
+      </Tooltip>
+    </Box>
+  );
+};
+
+
 async function setBets(match,body) {
   const host = window.location.origin
-  //const host='http://127.0.0.1:8000'
+  //const host = window.location.origin
   try {
     const response = await fetch(`${host}/setbet/${match.replace(' ','_')}`,{
       method: "POST",
@@ -102,7 +140,7 @@ const TextInputGrid = ({ matchobj }) => {
     
     const d1 = dayjs.tz(matchobj.Start_Time, "Asia/Kolkata");
     setDeadline(d1.isBefore(dayjs().tz('Asia/Kolkata')))
-    setMatchStart(d1.toDate())
+    setMatchStart(d1.subtract(30,'minute').toDate())
     setInputs(matchobj?.mybets||{})
   },[matchobj])
   
@@ -120,7 +158,7 @@ const TextInputGrid = ({ matchobj }) => {
     if (value === "") {
     setInputs((prev) => ({
       ...prev,
-      [key]: "",
+      [key]: 0,
     }));
     return;
     }
@@ -220,12 +258,13 @@ const TextInputGrid = ({ matchobj }) => {
           >
             Submit
     </Button>
+    <HowItWorksTooltip></HowItWorksTooltip>
     <Dialog open={open} onClose={handleClose}>
         <DialogTitle>Confirmation</DialogTitle>
         <DialogContent>
           Your bet has been submitted
         </DialogContent>
-
+        
         <DialogActions>
           <Button onClick={handleClose} color="primary" variant="contained">
             Understood
@@ -237,13 +276,14 @@ const TextInputGrid = ({ matchobj }) => {
 };
 
 export function BettingArena() {
-  const [matchNo, setMatchNo] = useState("Match_1");
+  const [matchNo, setMatchNo] = useState("current");
   const [rows,setRows]=useState({})
 
     useEffect( ()=>{ 
       (async () => {
         const bets = await getBets(matchNo);
         setRows(bets);
+        setMatchNo(bets.Match_No)
         console.log('setRows')
       })();}
       ,[matchNo])
@@ -267,6 +307,8 @@ export function BettingArena() {
           <MenuItem value="Match_1">Match 1</MenuItem>
           <MenuItem value="Match_2">Match 2</MenuItem>
           <MenuItem value="Match_3">Match 3</MenuItem>
+          <MenuItem value="Match_4">Match 4</MenuItem>
+          <MenuItem value="Match_5">Match 5</MenuItem>
         </Select>
       </FormControl>
 
@@ -274,3 +316,4 @@ export function BettingArena() {
     </Box>
   :<div></div>)
 }
+

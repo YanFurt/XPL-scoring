@@ -12,7 +12,7 @@ const root = createRoot(domNode);
 
 async function validate_session() {
   const host = window.location.origin
-  //const host='http://127.0.0.1:8000'
+  //const host = window.location.origin
   try {
     const response = await fetch(`${host}/validate_session`,{
       method: "POST",
@@ -59,7 +59,7 @@ function Container() {
       <Route path='/:year/stats/:endpoint' element={<MiscStat/>}></Route>
       <Route path='/login' element={<AuthForm updater={setUserIn}/>}></Route>
       <Route path='/manageteam' element={<SquadSelector/>}></Route>
-      <Route path='/betting/:match' element={<BettingArena/>}></Route>
+      <Route path='/betting' element={<BettingArena/>}></Route>
       <Route path="*" element={<Navigate to={`/${fetchyear}`} replace />} />
       
     </Routes>

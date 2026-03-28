@@ -18,7 +18,7 @@ const franchises = JSON.parse(process.env.FRANCHISES||"{}")
 
 async function getAucData(url:String) {
   const host = window.location.origin
-  //const host='http://127.0.0.1:8000'
+  //const host = window.location.origin
   try {
     const response = await fetch(`${host}/${url}`,{
       method: "POST"});
@@ -37,7 +37,7 @@ async function getAucData(url:String) {
 
 async function DoLogin(payload) {
   const host = window.location.origin
-  //const host='http://127.0.0.1:8000'
+  //const host = window.location.origin
   try {
     const response = await fetch(`${host}/login`,{
       method: "POST",
@@ -61,7 +61,7 @@ async function DoLogin(payload) {
 
 async function DoLogout() {
   const host = window.location.origin
-  //const host='http://127.0.0.1:8000'
+  //const host = window.location.origin
   try {
     const response = await fetch(`${host}/logout`,{
       method: "POST",
@@ -273,7 +273,7 @@ export const Navbar =({user,updater,year,yearupdater})=>{
       </button>
       <div className="dropdown-content">
       <NavLink className='Navlink' style={{ margin: 10 }} to={`/manageteam`}>Team Management</NavLink>
-      <NavLink className='Navlink' style={{ margin: 10 }} to={`/betting/Match_1`}>Betting arena</NavLink>
+      <NavLink className='Navlink' style={{ margin: 10 }} to={`/betting`}>Betting arena</NavLink>
       <button className='Navlink' style={{ margin: 10 }} onClick={handleLogout}>Logout</button>
       </div>
     </div> :<NavLink className='Navlink' style={{ margin: 10 }} to={`/login`}>Login</NavLink>}

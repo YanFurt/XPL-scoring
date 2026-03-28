@@ -10,9 +10,11 @@ import {SquadSelector} from './management.jsx'
 const domNode = document.getElementById('root');
 const root = createRoot(domNode);
 
+
 async function validate_session() {
-  const host = window.location.origin
-  //const host = window.location.origin
+  const host = process.env.NODE_ENV=='development' ?'http://127.0.0.1:8000' : window.location.origin
+  //const host = process.env.NODE_ENV=='development' ?'http://127.0.0.1:8000' : window.location.origin
+  
   try {
     const response = await fetch(`${host}/validate_session`,{
       method: "POST",

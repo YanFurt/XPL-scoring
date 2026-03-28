@@ -142,8 +142,8 @@ function generateBenchLogs(original,newbench,updater,lookup){
 
 
 async function getTeam() {
-  const host = window.location.origin
-  //const host = window.location.origin
+  const host = process.env.NODE_ENV=='development' ?'http://127.0.0.1:8000' : window.location.origin
+  //const host = process.env.NODE_ENV=='development' ?'http://127.0.0.1:8000' : window.location.origin
   try {
     const response = await fetch(`${host}/teamdata`,{
       method: "POST",
@@ -228,8 +228,8 @@ return transfer_delays.filter(i=>!!i).join('\n')+caplog+vcaplog+transfer_costs.f
 
 }
 async function setTeamState(body) {
-  const host = window.location.origin
-  //const host = window.location.origin
+  const host = process.env.NODE_ENV=='development' ?'http://127.0.0.1:8000' : window.location.origin
+  //const host = process.env.NODE_ENV=='development' ?'http://127.0.0.1:8000' : window.location.origin
   try {
     const response = await fetch(`${host}/updateteam`,{
       method: "POST",

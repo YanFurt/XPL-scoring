@@ -17,8 +17,8 @@ import './styles.css'
 const franchises = JSON.parse(process.env.FRANCHISES||"{}")
 
 async function getAucData(url:String) {
-  const host = window.location.origin
-  //const host = window.location.origin
+  const host = process.env.NODE_ENV=='development' ?'http://127.0.0.1:8000' : window.location.origin
+  //const host = process.env.NODE_ENV=='development' ?'http://127.0.0.1:8000' : window.location.origin
   try {
     const response = await fetch(`${host}/${url}`,{
       method: "POST"});
@@ -36,8 +36,8 @@ async function getAucData(url:String) {
 }
 
 async function DoLogin(payload) {
-  const host = window.location.origin
-  //const host = window.location.origin
+  const host = process.env.NODE_ENV=='development' ?'http://127.0.0.1:8000' : window.location.origin
+  //const host = process.env.NODE_ENV=='development' ?'http://127.0.0.1:8000' : window.location.origin
   try {
     const response = await fetch(`${host}/login`,{
       method: "POST",
@@ -60,8 +60,8 @@ async function DoLogin(payload) {
 }
 
 async function DoLogout() {
-  const host = window.location.origin
-  //const host = window.location.origin
+  const host = process.env.NODE_ENV=='development' ?'http://127.0.0.1:8000' : window.location.origin
+  //const host = process.env.NODE_ENV=='development' ?'http://127.0.0.1:8000' : window.location.origin
   try {
     const response = await fetch(`${host}/logout`,{
       method: "POST",
@@ -98,16 +98,18 @@ async function hashPassword(password) {
 
 
 function BasicTable({rows}) {
+     const cols: String[] = Object.keys(rows[0]||{})
+
+
      return ( 
        <TableContainer component={Paper} >
          <Table sx={{ width: 800 }} aria-label="simple table">
            <TableHead>
              <TableRow>
-               <TableCell>Team</TableCell>
-               <TableCell align="center">Points</TableCell>
-               <TableCell align="center">Matches</TableCell>
-               <TableCell align="center">C Matches</TableCell>
-               <TableCell align="right">VC Matches</TableCell>
+             
+            {cols.map((a)=><TableCell align="center" sx={{ fontWeight: 'bold' }}>{a.replace('_',' ')}</TableCell>)}
+       
+               
              </TableRow>
            </TableHead>
            <TableBody>
@@ -116,13 +118,10 @@ function BasicTable({rows}) {
                  key={row.Team}
                  sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
                >
-                 <TableCell component="th" scope="row">
+                 <TableCell component="th" scope="row" align="center">
                    {franchises[row.Team]}
                  </TableCell>
-                 <TableCell align="center">{row['Total Points']}</TableCell>
-                 <TableCell align="center">{row['Total Matches']}</TableCell>
-                 <TableCell align="center">{row['C Matches']}</TableCell>
-                 <TableCell align="right">{row['VC Matches']}</TableCell>
+                 {cols.filter(p=>p!='Team').map((a)=><TableCell align="center">{row[a]}</TableCell>)}
                </TableRow>
              ))}
            </TableBody>
@@ -170,6 +169,8 @@ function BasicTable({rows}) {
 
 export function PointsTable  () {
   const [data,setData] = useState([])
+  const[lastUpdated,setLastUpdated] = useState('')
+  const [lastMatch,setLastMatch]=useState('')
   //const [plotdata, setPlotdata]= useState({})
   //const [interval,setInterval] = useState([])
   const {year} = useParams()
@@ -177,8 +178,10 @@ export function PointsTable  () {
 
   useEffect( ()=>{ 
     (async () => {
-      const users = await getAucData(`${year}/standings`);
-      setData(users);
+      const {data,match,last_updated} = await getAucData(`${year}/standings`);
+      setData(data);
+      setLastMatch(match);
+      setLastUpdated(last_updated)
     })();
     /*(async () => {
       const {int,users2} = await getAucData('graphs/overall/line');
@@ -191,6 +194,8 @@ export function PointsTable  () {
   return      <div style={{ height: '100%', width: '100%' }}>
 
     <h1 style={{textAlign:'center'}}>Standings</h1>
+    <h5 style={{textAlign:'right'}}>Last updated: {`${lastMatch}`}</h5>
+    <h5 style={{textAlign:'right'}}>{`${lastUpdated}`}</h5>
    <div style={{ display: 'flex', flexDirection: 'column',maxHeight:800,maxWidth:800 ,margin:'20px auto'}}>
    <BasicTable rows={data}></BasicTable>
    </div>
@@ -218,12 +223,7 @@ export const Navbar =({user,updater,year,yearupdater})=>{
    
    const navigate=useNavigate() 
   
-   useEffect( ()=>{ 
-    (async () => {
-      const users = await getAucData("latestupdate");
-      //setTime(users);
-    })();}
-    ,[])
+   
 
     const handleSelect = (e) => {
         const selectedyear = e.target.value;

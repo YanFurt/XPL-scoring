@@ -6,10 +6,18 @@ import datetime as dt
 import pytz
 from dotenv import load_dotenv
 import os
+import requests
+
 
 load_dotenv()  
 
-def live_match_scoring(db):
+
+
+
+
+
+
+def live_match_scoring(db, match_data):
 
 
 
@@ -18,8 +26,7 @@ def live_match_scoring(db):
 
 
     #Reading in the match schedule
-    with open('match_schedule.json', 'r') as f:
-        match_schedule = json.load(f)
+    
 
     #Parameters for MongoDB connection
 
@@ -28,49 +35,37 @@ def live_match_scoring(db):
 
     overall_collection = db['Overall']
     squad_audit_collection = db['Squad Audit Trail']
-    live_status_collection = df['Live Status']
 
     #Pulling data from the Overall collection
     df = pd.DataFrame([d for d in overall_collection.find({})])
     df.set_index('_id', inplace=True)
 
-    #Pulling the live status
-    live_df = pd.DataFrame([d for d in live_status_collection.find({})])
-    last_match_id = int(live_df.loc[0,'Last Match ID'])
-    last_match = live_df.loc[0,'Last Match']
 
     #ESPNCricinfo Client
     ci = CricinfoClient()
 
-    #Current Indian Time
-    ist_tz = pytz.timezone('Asia/Kolkata')
-    current_ist = dt.datetime.now(ist_tz).replace(tzinfo=None)
-
     #Identifying the current match for scoring
     #Current time should be between 0.5 hours and 4.5 hours after the match start time
-    current_match_id = None
-    for k, v in match_schedule.items():
-        match_start_time = dt.datetime.strptime(v['start_time'], '%Y-%m-%d %H:%M')
-        if current_ist >= match_start_time + dt.timedelta(minutes=30) and current_ist <= match_start_time + dt.timedelta(minutes=270):
-            current_match_id = int(k)
-            current_match_slug = v['slug']
-            home_team = v['home_team']
-            away_team = v['away_team']
-            current_match = f'{v['title']}, {v['home_team']} vs. {v['away_team']}'
-            break
+    match_id = match_data['index']
+    current_match_id = int(match_id)
+    current_match_slug = match_data['slug']
+    title=match_data['title']
+    home_team=match_data['home_team']
+    away_team=match_data['away_team']
 
-    #Do not update if there is no live match
-    if not current_match_id:
-        return df, last_match, 'Match Completed'
-    #Do not update if the current match is already finalized and scored in the Overall collection
-    if current_match_id == last_match_id:
-        return df, last_match, 'Match Completed'
+    current_match = f'{title}, {home_team} vs. {away_team}'
 
     #Match scorecard and info
     match_scorecard = ci.match_scorecard(series_slug, current_match_slug)
     match_info = match_scorecard['match']
     match_content = match_scorecard['content']
-    stage = match_info['stage']
+    stage = match_info['status']
+
+    if stage == 'RESULT':
+        print('calling scoring')
+        match_check_wrapper(db,match_id)
+        return df.reset_index(), current_match, 'Updating... Refresh the page'
+
     innings = match_info["liveInning"]
     if innings == 1:
         live_innings = '1st'
@@ -107,7 +102,10 @@ def live_match_scoring(db):
     #Assign a team match to all players in the squads of both the teams, irrespective of whether they are playing in the match or not
     match_df['Team_Matches'] = 1
 
+    match_df['POM_Awards'] = 0
+
     #List of players in the playing XII for both teams
+   
     players = match_content["matchPlayers"]["teamPlayers"][0]['players'] + match_content["matchPlayers"]["teamPlayers"][1]['players']
 
     #Assigning appearance points
@@ -117,24 +115,21 @@ def live_match_scoring(db):
         if player_id in match_df.index:
             match_df.loc[player_id, 'Appearance'] = 4
 
-    #Assign POM flag only if the match is finished
-    if stage == 'FINISHED':
-        pom = [award['player'] for award in match_content['matchPlayerAwards'] if award['type'] == 'PLAYER_OF_MATCH']
-        pom_id = pom[0]['objectId'] if pom else None
-        pom_name = pom[0]['longName'] if pom else None
-        if pom_id in match_df.index:
-            match_df.loc[pom_id, 'POM_Awards'] = 1
-
-
 
     ######################## Batting ########################
 
 
 
     #Obtaining batters from both the teams
+    batters=[]
     team_1_batters = match_content['innings'][0]['inningBatsmen']
-    team_2_batters = match_content['innings'][1]['inningBatsmen']
-    batters = team_1_batters + team_2_batters
+    team_2_batters = []
+    batters.extend(team_1_batters)
+    try:
+        team_2_batters = match_content['innings'][1]['inningBatsmen']
+        batters.extend(team_2_batters)
+    except:
+        pass
 
     #Determining batting positions
     batting_positions = {}
@@ -188,9 +183,15 @@ def live_match_scoring(db):
 
 
     #Obtaining bowlers from both the teams
+    bowlers=[]
     team_1_bowlers = match_content['innings'][0]['inningBowlers']
-    team_2_bowlers = match_content['innings'][1]['inningBowlers']
-    bowlers = team_1_bowlers + team_2_bowlers
+    team_2_bowlers = []
+    bowlers.extend(team_1_bowlers)
+    try:
+        team_2_bowlers = match_content['innings'][1]['inningBowlers']
+        bowlers.extend(team_2_bowlers)
+    except:
+        pass
 
     #Assigning bowling points
     for bowl in bowlers:
@@ -232,10 +233,17 @@ def live_match_scoring(db):
 
 
     #Obtaining fall of wickets from both the teams, later used to find fielders involved
+    wickets=[]
     team_1_wickets = match_content['innings'][0]['inningWickets']
-    team_2_wickets = match_content['innings'][1]['inningWickets']
-    wickets = team_1_wickets + team_2_wickets
+    team_2_wickets=[]
+    wickets.extend(team_1_wickets)
+    try:
+        team_2_wickets = match_content['innings'][1]['inningWickets']
+        wickets.extend(team_2_wickets)
+    except:
+        pass
 
+    
     #Obtaining dismissal counts of each type
     fielding_template = {'Catches': 0, 'Runout': 0, 'Direct_Runout': 0, 'Stumping': 0}
     fielding_dismissals = {id: fielding_template.copy() for id in match_df.index}
@@ -333,7 +341,7 @@ def live_match_scoring(db):
 
 
     final_df = df.copy()
-
+  
     #Adding current match numeric columns to existing columns in Overall collection
     num_cols = ['Appearance','POM_Awards','Team_Matches',
                 'Runs','Balls_Faced','Fours','Sixes','Ducks','SR','Thirty','Fifty','Hundred',
@@ -344,8 +352,42 @@ def live_match_scoring(db):
                 'Bench_Penalties','C_Penalties','VC_Penalties','Total_Penalties']
     final_df[num_cols] = df[num_cols].add(match_df[num_cols], fill_value = 0)
 
+
     #Converting columns to int
     for col in [nc for nc in num_cols if nc not in ['Total_Points','Total_Matches','VC_Penalties','Total_Penalties']]:
         final_df[col] = final_df[col].astype('int')
 
-    return final_df, current_match, live_status
+    return final_df.reset_index(), current_match, live_status
+
+def match_check_wrapper(db,matchid):
+    live_status_collection = db['Live Status']
+    processed_matches=live_status_collection.find({}).to_list()[0]['Processed Matches']
+    if processed_matches.get(matchid)==False:
+    
+        GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')
+        OWNER = os.environ.get('OWNER')
+        REPO = os.environ.get('REPO')
+        WORKFLOW_FILE = "python-app.yml"  # or workflow ID
+        BRANCH = "main"
+
+        url = f"https://api.github.com/repos/{OWNER}/{REPO}/actions/workflows/{WORKFLOW_FILE}/dispatches"
+
+        headers = {
+            "Accept": "application/vnd.github+json",
+            "Authorization": f"Bearer {GITHUB_TOKEN}"
+        }
+
+        data = {
+            "ref": BRANCH,
+            "inputs": {
+                "match_id": matchid
+            }
+        }
+
+        response = requests.post(url, headers=headers, json=data)
+
+        print(response.status_code)
+        print(response.text)
+
+            
+    return

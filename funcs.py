@@ -6,11 +6,7 @@ import os,json
 
 load_dotenv()  
 
-with open('match_schedule.json', 'r') as file:
-    match_schedule = json.load(file)
 
-schedf=pd.DataFrame(match_schedule).T.reset_index().set_index('start_time')
-schedf.index=pd.to_datetime(schedf.index)
 
 def get_player_games(db,pnames):
     players = db.find({'_id':{'$in':pnames}},{'_id':1,	'Player':1,	"IPL_Team":1,'Base_Matches':1}).to_list()

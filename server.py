@@ -1,4 +1,4 @@
-from fastapi import FastAPI,  Body,Depends,Request
+from fastapi import FastAPI,  Body,Depends,Request,BackgroundTasks
 from dataclasses import dataclass
 import uuid,os
 import json,random
@@ -7,11 +7,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, RedirectResponse,FileResponse,Response
 from security import verify_jwt_token,create_jwt_token,LoginReq
-from funcs import update_transfers,schedf
-from scoring import live_match_scoring
+from funcs import update_transfers
+from scoring import live_match_scoring,match_check_wrapper
 
 from pymongo import MongoClient ,UpdateOne, UpdateMany
 import datetime as dt 
+from datetime import timedelta
 import numpy as np
 from dotenv import load_dotenv
  
@@ -21,6 +22,12 @@ players = json.loads(os.getenv("FRANCHISES"))
 print(players)
 client = MongoClient(mongostring)
 
+with open('match_schedule.json', 'r') as file:
+    match_schedule = json.load(file)
+
+schedf=pd.DataFrame(match_schedule).T.reset_index().set_index('start_time')
+schedf['match_processed']=False
+schedf.index=pd.to_datetime(schedf.index).tz_localize('Asia/Kolkata')
 
 db_2025 = client['XPL_2025']
 overall_2025 = db_2025['Overall']
@@ -143,9 +150,6 @@ async def getdata(key=Body(...)):
     except Exception as e:
         return e
 
-@app.post('/latestupdate')
-async def getdate():
-    return f"Last updated: {dbm['2026'].update_time} ({dbm['2026'].update_match})"
 
 @app.post('/login')
 async def login(response:Response,login_req:LoginReq):
@@ -201,13 +205,67 @@ async def update_team(request:Request,user=Depends(verify_jwt_token)):
 #Fantasy points table
 @app.post('/{year:str}/standings')
 def points_df(year):
+    if year=='2025':
+        df = dbm[year].df
+        print(df.columns)
+        return_df = df[(df['Team']!='Unsold')&(df['Team']!='')].groupby(['Team'])[['Total Points','Total Matches','C Matches','VC Matches']].sum().\
+                    sort_values(by=['Total Points','Total Matches'],ascending=[False,True]).reset_index()
+        title='The Final'
+        last_updated='Tournament end'
+    else:
+        live_status_collection = db_2026['Live Status']
+        live_status=live_status_collection.find({}).to_list()[0]
+        print(live_status)
+        processed_matches=live_status['Processed Matches']
+        title=live_status['Last Match']
+        last_updated='Match Completed'
+        
+        prev_matches=schedf.loc[:pd.Timestamp.now().tz_localize('Asia/Kolkata')]
+        num_processed=0
+        for i,j in prev_matches.iterrows():
+            if not processed_matches.get(j['index']):
+                num_processed+=1
+                return_df,title,last_updated = live_match_scoring(db_2026,j)
+                return_df=return_df[(return_df['Team']!='Unsold')&(return_df['Team']!='')][['Team','Total_Points', 'Total_Penalties']].groupby('Team').sum()
+            
+
+    if not num_processed:
+        print
+        return_df =pd.DataFrame(overall_2026.find({},{'Team':1,'Total_Points':1, 'Total_Penalties':1}).to_list())
+        return_df=return_df[(return_df['Team']!='Unsold')&(return_df['Team']!='')][['Team','Total_Points', 'Total_Penalties']].groupby('Team').sum()
     
-    df = dbm[year].df
-    print(df.columns)
-    return_df = df[(df['Team']!='Unsold')&(df['Team']!='')].groupby(['Team'])[['Total Points','Total Matches','C Matches','VC Matches']].sum().\
-                sort_values(by=['Total Points','Total Matches'],ascending=[False,True]).reset_index()
-    return return_df.to_dict(orient='records')
+    #Getting completed matches from live status
+    matches = [d for d in db_2026['Live Status'].find({})][0]['Processed Matches']
+    completed_matches = {int(k):v for k,v in matches.items() if v}
+
+    #Bets success flags
+    bets_df = pd.DataFrame([d for d in db_2026['Bets'].find({})])
+    bets_df = bets_df[bets_df['_id'].isin(completed_matches.keys())]
+
+    #Function to calculate bet score based on multiplier, success, and bet amount 
+    def get_bet_score(multiplier, success, bet):
+
+        score = {k: (multiplier[k] * success[k] * bet[k]) - bet[k] for k in multiplier}
+        sum_score = sum(score.values())
+        return sum_score
     
+    #Assigning bet score
+    for participant in ['Alex', 'Jinto', 'Nihaar', 'Sayak', 'Swatantra', 'Yannick', 'Yatharth']:
+        participant_col = f'{participant}_Bets'
+        bets_df[f'{participant}_Score'] = bets_df.apply(lambda row: get_bet_score(row['Multiplier'],row['Event_Success'],row[participant_col]), axis = 1)
+
+    #Unpivoting the table
+    score_cols = [p+'_Score' for p in ['Alex', 'Jinto', 'Nihaar', 'Sayak', 'Swatantra', 'Yannick', 'Yatharth']]
+    bets_result_df = bets_df[score_cols].rename(columns=lambda x:x.split('_')[0]).sum().reset_index()
+    bets_result_df.columns = ['Team','Betting_Points']
+    print(return_df.head())
+
+    #Mergining fantasy points with betting points
+    return_df = return_df.reset_index().merge(bets_result_df, on = 'Team')[['Team','Total_Points','Betting_Points','Total_Penalties']]
+    
+    return_df['XPL Points'] = return_df['Total_Points']-return_df['Total_Penalties']+return_df['Betting_Points']
+        
+    return {'data':return_df.sort_values(by=['XPL Points','Total_Points'],ascending=[False,False]).rename(columns={'Total_Points': 'Fantasy Points','Total_Penalties':'Penalties','Betting_Points':'Betting points'}).to_dict(orient='records'),'match':title,'last_updated':last_updated}
 
 
 @app.get('/updatename')
@@ -388,7 +446,7 @@ def sun_graph(award:str,year):
 def load_wagers(match:str,user=Depends(verify_jwt_token)):
 
         if match=='current':
-            match=schedf.loc[pd.Timestamp.now():].iloc[0]['Match Number']
+            match=schedf.loc[pd.Timestamp.now().tz_localize('Asia/Kolkata'):].iloc[0]['Match Number']
         blst=bets.find({'Match_No': match.replace('_',' ')},{'Match_Description':1,
                                                              'Match_No':1,
         'Start_Time':1,

@@ -1,4 +1,4 @@
-import React,{ useEffect,  useState } from 'react';
+import React,{ useCallback, useEffect,  useState } from 'react';
 import {
   Box,
   FormControl,
@@ -21,8 +21,8 @@ dayjs.extend(timezone)
 
 
 async function getBets(match) {
-  const host = window.location.origin
-  //const host = window.location.origin
+  const host = process.env.NODE_ENV=='development' ?'http://127.0.0.1:8000' : window.location.origin
+  //const host = process.env.NODE_ENV=='development' ?'http://127.0.0.1:8000' : window.location.origin
   try {
     const response = await fetch(`${host}/bet/${match.replace(' ','_')}`,{
       method: "POST",
@@ -33,7 +33,7 @@ async function getBets(match) {
     }
     
     const data = await response.text();
-    console.log(data)
+  
     return JSON.parse(data)
     //console.log(json);   i
   } catch (error) {
@@ -54,7 +54,7 @@ const HowItWorksTooltip = () => {
               href="/guide/guide.pdf#page=7"
               target="_blank"
               rel="noopener noreferrer"
-              sx={{ color: "#fff" }} 
+              sx={{ color: "#b0ac34" }} 
             >
               here
             </Link>
@@ -79,8 +79,8 @@ const HowItWorksTooltip = () => {
 
 
 async function setBets(match,body) {
-  const host = window.location.origin
-  //const host = window.location.origin
+  const host = process.env.NODE_ENV=='development' ?'http://127.0.0.1:8000' : window.location.origin
+  //const host = process.env.NODE_ENV=='development' ?'http://127.0.0.1:8000' : window.location.origin
   try {
     const response = await fetch(`${host}/setbet/${match.replace(' ','_')}`,{
       method: "POST",
@@ -179,7 +179,7 @@ const TextInputGrid = ({ matchobj }) => {
   const rows = Object.keys(matchobj?.Bets);
 
   const handleConfirm = async ()=>{
-  console.log(inputs)
+
   const status = await setBets(matchobj.Match_No,inputs);
   setOpen(true)
   return
@@ -193,8 +193,7 @@ const TextInputGrid = ({ matchobj }) => {
   
 }
 
-  console.log('ms',matchStart)
-  console.log(inputs)
+  
   return (<div>
     <h1>{matchobj?.Match_Description}</h1>
     <h3>{matchobj?.Venue}</h3>
@@ -278,18 +277,22 @@ const TextInputGrid = ({ matchobj }) => {
 export function BettingArena() {
   const [matchNo, setMatchNo] = useState("current");
   const [rows,setRows]=useState({})
+  const [call,setCall] = useState(true)
 
-    useEffect( ()=>{ 
+
+  useEffect( ()=>{ 
       (async () => {
         const bets = await getBets(matchNo);
         setRows(bets);
-        setMatchNo(bets.Match_No)
-        console.log('setRows')
+        setMatchNo(bets.Match_No.replace(' ','_'))
       })();}
-      ,[matchNo])
+      ,[call])
 
 
-  console.log(rows)
+
+
+
+  
 
   return (Object.keys(rows).length>0? 
     <Box p={3}>
@@ -302,7 +305,7 @@ export function BettingArena() {
         <Select
           value={matchNo}
           label={matchNo.replace('_',' ')}
-          onChange={(e) => setMatchNo(e.target.value)}
+          onChange={(e) => [setMatchNo(e.target.value),setCall(!call)]}
         >
           <MenuItem value="Match_1">Match 1</MenuItem>
           <MenuItem value="Match_2">Match 2</MenuItem>

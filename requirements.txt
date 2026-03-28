@@ -7,3 +7,4 @@ dotenv
 PyJWT
 cricdata
 pytz
+requests

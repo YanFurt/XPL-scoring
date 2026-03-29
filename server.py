@@ -127,13 +127,13 @@ def test_react():
     return HTMLResponse(content)
 
 
-# @app.exception_handler(404)
-# async def custom_404_handler(a,b):
-#     return RedirectResponse("/2026")
+@app.exception_handler(404)
+async def custom_404_handler(a,b):
+    return RedirectResponse("/2026")
 
-# @app.exception_handler(405)
-# async def custom_405_handler(a,b):
-#     return RedirectResponse("/2026")
+@app.exception_handler(405)
+async def custom_405_handler(a,b):
+    return RedirectResponse("/2026")
 
 @app.post('/update_df')
 async def getdata(key=Body(...)):
@@ -226,7 +226,6 @@ def points_df(year):
         for i,j in prev_matches.iterrows():
             if not processed_matches.get(j['index']):
                 num_processed+=1
-                print(j)
                 return_df,title,last_updated = live_match_scoring(db_2026,j)
                 return_df=return_df[(return_df['Team']!='Unsold')&(return_df['Team']!='')][['Team','Total_Points', 'Total_Penalties']].groupby('Team').sum()
             

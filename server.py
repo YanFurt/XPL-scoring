@@ -215,16 +215,19 @@ def points_df(year):
     else:
         live_status_collection = db_2026['Live Status']
         live_status=live_status_collection.find({}).to_list()[0]
-        print(live_status)
+        
         processed_matches=live_status['Processed Matches']
         title=live_status['Last Match']
         last_updated='Match Completed'
         
         prev_matches=schedf.loc[:pd.Timestamp.now().tz_localize('Asia/Kolkata')]
+        print(pd.Timestamp.now().tz_localize('Asia/Kolkata'))
+        print(prev_matches)
         num_processed=0
         for i,j in prev_matches.iterrows():
             if not processed_matches.get(j['index']):
                 num_processed+=1
+                print(j)
                 return_df,title,last_updated = live_match_scoring(db_2026,j)
                 return_df=return_df[(return_df['Team']!='Unsold')&(return_df['Team']!='')][['Team','Total_Points', 'Total_Penalties']].groupby('Team').sum()
             

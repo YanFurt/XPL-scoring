@@ -47,6 +47,7 @@ def live_match_scoring(db, match_data):
     #Identifying the current match for scoring
     #Current time should be between 0.5 hours and 4.5 hours after the match start time
     match_id = match_data['index']
+    print(match_id)
     current_match_id = int(match_id)
     current_match_slug = match_data['slug']
     title=match_data['title']
@@ -288,7 +289,8 @@ def live_match_scoring(db, match_data):
     match_df['Base_Matches'] = (match_df['Appearance'] == 4).astype(int)
     match_df['Valid_Matches'] = match_df['Base_Matches'] * (~match_df['Bench'])
     match_df['Total_Matches'] = match_df['Valid_Matches'] * (2*match_df['Captain'] + 1.5*match_df['Vice_Captain'] + 1*(~match_df['Captain'] & ~match_df['Vice_Captain']))
-
+    match_df['C_Matches'] = match_df['Valid_Matches'] * match_df['Captain']
+    match_df['VC_Matches'] = match_df['Valid_Matches'] * match_df['Vice_Captain']
 
 
     ######################## Penalties ########################

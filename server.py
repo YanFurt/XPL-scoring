@@ -466,7 +466,7 @@ def load_wagers(match:str,user=Depends(verify_jwt_token)):
 
         if match=='current':
             match_data=schedf.loc[pd.Timestamp.now(tz='Asia/Kolkata'):].iloc[0]
-            match=['Match Number']
+            match=match_data['Match Number']
         
         blst=bets.find({'Match_No': match.replace('_',' ')},{'Match_Description':1,
                                                                 'Match_No':1,

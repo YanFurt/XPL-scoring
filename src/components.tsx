@@ -286,7 +286,7 @@ export const Navbar =({user,updater,year,yearupdater})=>{
 
 
 function TeamTable({rows}) {
-  const cols: String[] = ['Player','Type','IPL Team',
+  const cols: String[] = ['Player','IPL Team',
     'Appearance Points','Batting Points','Bowling Points','Fielding Points','Total Points',
     'Total Matches','C Matches','VC Matches','Points per Match']
   return ( 

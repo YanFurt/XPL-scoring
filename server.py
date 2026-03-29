@@ -467,24 +467,17 @@ def load_wagers(match:str,user=Depends(verify_jwt_token)):
         if match=='current':
             match_data=schedf.loc[pd.Timestamp.now(tz='Asia/Kolkata'):].iloc[0]
             match=['Match Number']
-        else:
-            match_data=schedf[schedf['Match Number']==match].iloc[0]
-
-        if pd.Timestamp.now()<match_data['starttime']:
-            blst=bets.find({'Match_No': match.replace('_',' ')},{'Match_Description':1,
-                                                                    'Match_No':1,
-            'Start_Time':1,
-            'Venue':1,
-            'Bets':1,
-            'Chances':1,
-            f"{user}_Bets":1}).to_list()[0]
-            blst['mybets']=blst[f"{user}_Bets"]
-            del blst[f"{user}_Bets"]
-            return blst
-        else:
-            blst=bets.find({'Match_No': match.replace('_',' ')}).to_list()[0]
-            blst['mybets']=blst[f"{user}_Bets"]
-            return blst
+        
+        blst=bets.find({'Match_No': match.replace('_',' ')},{'Match_Description':1,
+                                                                'Match_No':1,
+        'Start_Time':1,
+        'Venue':1,
+        'Bets':1,
+        'Chances':1,
+        f"{user}_Bets":1}).to_list()[0]
+        blst['mybets']=blst[f"{user}_Bets"]
+        del blst[f"{user}_Bets"]
+        return blst
 
 
 @app.post('/setbet/{match:str}')

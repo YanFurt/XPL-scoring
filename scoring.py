@@ -61,7 +61,7 @@ def live_match_scoring(db, match_data):
     match_info = match_scorecard['match']
     match_content = match_scorecard['content']
     stage = match_info['status']
-
+    print('fetched match scorecard')
     if stage == 'RESULT':
         print('calling scoring')
         match_check_wrapper(db,match_id)

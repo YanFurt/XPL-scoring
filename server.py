@@ -15,6 +15,8 @@ import datetime as dt
 from datetime import timedelta
 import numpy as np
 from dotenv import load_dotenv
+
+from award_scoring import get_valid_metric
  
 load_dotenv()  
 mongostring=os.getenv("MONGO")
@@ -41,6 +43,7 @@ live_status_2026 = db_2026['Live Status']
 players_2026=db_2026['Players']
 users_2026=db_2026['Squad Audit Trail']
 bets=db_2026['Bets']
+match_2026 = db_2026['Matches']
 
 class dbmanager(): 
 
@@ -283,9 +286,18 @@ def rename_player(capi,cinfo):
 #Orange Cap table
 @app.post('/{year:str}/awards/Runs')
 def runs_df(year):
-    df = dbm[year].df
-    return_df = df[(df['Team']!='Unsold')].groupby(['Team'])[['Runs','Total Matches']].sum().\
-                sort_values(by=['Runs','Total Matches'],ascending=[False,True]).reset_index()
+    if year == '2026':
+        matches_df = pd.DataFrame([d for d in match_2026.find({})]).set_index('_id')
+        participants = ['Alex','Jinto','Nihaar','Sayak','Swatantra','Yannick','Yatharth']
+        awards_df = pd.DataFrame(index = participants)
+        for p in participants:
+            awards_df.loc[p,'Runs'] = get_valid_metric(p,'Runs',matches_df)
+        awards_df = awards_df.reset_index(names='Team')
+        return_df = awards_df[['Team','Runs']].sort_values(by='Runs',ascending=False)
+    else:
+        df = dbm[year].df
+        return_df = df[(df['Team']!='Unsold')].groupby(['Team'])[['Runs','Total Matches']].sum().\
+                    sort_values(by=['Runs','Total Matches'],ascending=[False,True]).reset_index()
     return return_df.to_dict(orient='records')
 
 #Purple Cap table

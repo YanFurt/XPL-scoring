@@ -197,7 +197,7 @@ async def validate_session(user=Depends(verify_jwt_token)):
 @app.post('/updateteam')
 async def update_team(request:Request,user=Depends(verify_jwt_token)):
     payload = await request.json()
-    status = update_transfers(overall_2026,users_2026,user,payload)
+    status = update_transfers(overall_2026,users_2026,user,payload,schedf)
     return 'Success'
 
 
@@ -220,9 +220,8 @@ def points_df(year):
         title=live_status['Last Match']
         last_updated='Match Completed'
         
-        prev_matches=schedf.loc[:pd.Timestamp.now().tz_localize('Asia/Kolkata')]
-        print(pd.Timestamp.now().tz_localize('Asia/Kolkata'))
-        print(prev_matches)
+        prev_matches=schedf.loc[:pd.Timestamp.now(tz='Asia/Kolkata')]
+        
         num_processed=0
         for i,j in prev_matches.iterrows():
             if not processed_matches.get(j['index']):
@@ -449,7 +448,7 @@ def sun_graph(award:str,year):
 def load_wagers(match:str,user=Depends(verify_jwt_token)):
 
         if match=='current':
-            match=schedf.loc[pd.Timestamp.now().tz_localize('Asia/Kolkata'):].iloc[0]['Match Number']
+            match=schedf.loc[pd.Timestamp.now(tz='Asia/Kolkata'):].iloc[0]['Match Number']
         blst=bets.find({'Match_No': match.replace('_',' ')},{'Match_Description':1,
                                                              'Match_No':1,
         'Start_Time':1,

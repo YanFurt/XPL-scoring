@@ -17,11 +17,11 @@ def get_transfer_limits(db,user):
     lst = db.find({'username':user}).to_list()[0]
     return {'transfers':5-len(lst['transfer_history']), 'cap':2-len(lst['c_change_history']),'vcap':2-len(lst['vc_change_history'])}
 
-def get_match_ids(franchise, num_valid=20):
+def get_match_ids(franchise,schedf, num_valid=20):
     return list(schedf[(schedf.index >= pd.Timestamp.now()) & (schedf.home_team==franchise)|(schedf.away_team==franchise)].tail(num_valid)['index'].values)
 
 
-def update_transfers(overall_db,audit_db,player,dct):
+def update_transfers(overall_db,audit_db,player,dct,schedf):
     inl=dct.get('in')
     outl=dct.get('out')
     cap_change = dct.get("cap_change")
@@ -37,13 +37,13 @@ def update_transfers(overall_db,audit_db,player,dct):
             
             playerout=outl[i]
             mpout,franchiseout=transfer_games[playerout]
-            outgoing_remove_ids=get_match_ids(franchiseout)
+            outgoing_remove_ids=get_match_ids(franchiseout,schedf)
             try:
                 playerin=inl[i]
                 mpin,franchisein=transfer_games[playerin]
                 incoming_valid_games = 14-mpout
 
-                new_incoming_valid_ids=get_match_ids(franchisein, incoming_valid_games)
+                new_incoming_valid_ids=get_match_ids(franchisein,schedf, incoming_valid_games)
                 overall_mongoupdate_objects.append(UpdateOne(filter={ "_id": playerin },
                         update={ "$set": { "Bench": False }, '$addToSet': { 'Valid_Matches_List': { '$each': [int(j) for j in new_incoming_valid_ids] }  },'$addToSet':{ 'Penalty_Matches_List.Bench': { '$each': [int(j) for j in new_incoming_valid_ids if tlimit-i-1<0] }  }}))
                 
@@ -78,11 +78,11 @@ def update_transfers(overall_db,audit_db,player,dct):
         mpout,franchiseout=cap_games.get(playerout,(0,''))
         incoming_valid_games = 14-mpout
 
-        new_incoming_valid_ids=get_match_ids(franchisein, incoming_valid_games)
+        new_incoming_valid_ids=get_match_ids(franchisein,schedf, incoming_valid_games)
         overall_mongoupdate_objects.append(UpdateOne(filter={ "_id": playerin },
                     update={ "$set": { "Captain": True }, '$addToSet': { 'C_Matches_List': { '$each': [int(i) for i in new_incoming_valid_ids] }  },'$addToSet':{ 'Penalty_Matches_List.C': { '$each': [int(j) for j in new_incoming_valid_ids if climit<=0] }  }}))
 
-        outgoing_remove_ids=get_match_ids(franchiseout)
+        outgoing_remove_ids=get_match_ids(franchiseout,schedf)
         overall_mongoupdate_objects.append(UpdateOne(filter={"_id": playerout },
                     update={ "$set": { "Captain": False }, '$pullAll': { 'C_Matches_List': [int(i) for i in outgoing_remove_ids] },'$pullAll': { 'Penalty_Matches_List.C': [int(j) for j in outgoing_remove_ids] } }))
 
@@ -102,11 +102,11 @@ def update_transfers(overall_db,audit_db,player,dct):
         mpout,franchiseout=vcap_games.get(playerout,(0,''))
         incoming_valid_games = 14-mpout
 
-        new_incoming_valid_ids=get_match_ids(franchisein, incoming_valid_games)
+        new_incoming_valid_ids=get_match_ids(franchisein,schedf, incoming_valid_games)
         overall_mongoupdate_objects.append(UpdateOne(filter={ "_id": playerin },
                     update={ "$set": { "Vice_Captain": True }, '$addToSet': { 'VC_Matches_List': { '$each': [int(i) for i in new_incoming_valid_ids] }  },'$addToSet':{ 'Penalty_Matches_List.VC': { '$each': [int(j) for j in new_incoming_valid_ids if vclimit<=0] }  }}))
 
-        outgoing_remove_ids=get_match_ids(franchiseout)
+        outgoing_remove_ids=get_match_ids(franchiseout,schedf)
         overall_mongoupdate_objects.append(UpdateOne(filter={ "_id": playerout },
                     update={ "$set": { "Vice_Captain": False }, '$pullAll': { 'VC_Matches_List': [int(i) for i in outgoing_remove_ids] },'$pullAll': { 'Penalty_Matches_List.VC': [int(j) for j in outgoing_remove_ids] } }))
 

@@ -57,7 +57,10 @@ def live_match_scoring(db, match_data):
     current_match = f'{title}, {home_team} vs. {away_team}'
 
     #Match scorecard and info
-    match_scorecard = ci.match_scorecard(series_slug, current_match_slug)
+    try:
+        match_scorecard = ci.match_scorecard(series_slug, current_match_slug)
+    except Exception as e:
+        print(e)
     match_info = match_scorecard['match']
     match_content = match_scorecard['content']
     stage = match_info['status']

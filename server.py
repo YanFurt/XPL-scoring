@@ -304,7 +304,7 @@ def runs_df(year):
 @app.post('/{year:str}/awards/Wickets')
 def wickets_df(year):
     df = dbm[year].df
-    return_df = df[(df['Team']!='Unsold')].groupby(['Team'])[['Wickets','Total Matches']].sum().\
+    return_df = df[(df['Team'].isin(players.keys()))].groupby(['Team'])[['Wickets','Total Matches']].sum().\
                 sort_values(by=['Wickets','Total Matches'],ascending=[False,True]).reset_index()
     return_df['Wickets'] //= 20
     
@@ -314,7 +314,7 @@ def wickets_df(year):
 @app.post('/{year:str}/awards/Catches')
 def catches_df(year):
     df = dbm[year].df
-    return_df = df[(df['Team']!='Unsold')].groupby(['Team'])[['Catches','Total Matches']].sum().\
+    return_df = df[(df['Team'].isin(players.keys()))].groupby(['Team'])[['Catches','Total Matches']].sum().\
                 sort_values(by=['Catches','Total Matches'],ascending=[False,True]).reset_index()
     return_df['Catches'] //= 8
     return return_df.to_dict(orient='records')
@@ -323,7 +323,7 @@ def catches_df(year):
 @app.post('/{year:str}/awards/Sixes')
 def sixes_df(year):
     df = dbm[year].df
-    return_df = df[(df['Team']!='Unsold')].groupby(['Team'])[['Sixes','Total Matches']].sum().\
+    return_df = df[(df['Team'].isin(players.keys()))].groupby(['Team'])[['Sixes','Total Matches']].sum().\
                 sort_values(by=['Sixes','Total Matches'],ascending=[False,True]).reset_index()
     return_df['Sixes'] //= 2
     return return_df.to_dict(orient='records')
@@ -332,23 +332,29 @@ def sixes_df(year):
 @app.post('/{year:str}/awards/Dots')
 def dots_df(year):
     df = dbm[year].df
-    return_df = df[(df['Team']!='Unsold')].groupby(['Team'])[['Dots','Total Matches']].sum().\
+    return_df = df[(df['Team'].isin(players.keys()))].groupby(['Team'])[['Dots','Total Matches']].sum().\
                 sort_values(by=['Dots','Total Matches'],ascending=[False,True]).reset_index()   
     return return_df.to_dict(orient='records')
 
 #Sold player by base points
 @app.post('/{year:str}/stats/SoldPlayerStats')
 def sold_df(year):
-    df = dbm[year].df
-    return_df = df[(df['Team']!='Unsold')].groupby(['Player','IPL Team','Team'])['Base Total'].sum().to_frame().\
-                sort_values(by=['Base Total','Player'],ascending=[False,True]).reset_index()
+    if year=='2025':
+        df = dbm[year].df
+        return_df = df[(df['Team'].isin(players.keys()))].groupby(['Player','IPL Team','Team'])['Base Total'].sum().to_frame().\
+                    sort_values(by=['Base Total','Player'],ascending=[False,True]).reset_index()
+    else:
+        df=pd.DataFrame(overall_2026.find({},{'Player':1,'Team':1,'IPL_Team':1,'Total_Points':1}).to_list())
+        df.rename(columns={'Total_Points':"Base Total","IPL_Team":"IPL Team"},inplace=True)
+        return_df = df[(df['Team'].isin(players.keys()))].groupby(['Player','IPL Team','Team'])['Base Total'].sum().to_frame().\
+                    sort_values(by=['Base Total','Player'],ascending=[False,True]).reset_index()
     return return_df.to_dict(orient='records')
     
 #Unsold players by base points
 @app.post('/{year:str}/stats/UnsoldPlayerStats')
 def unsold_df(year):
     df = dbm[year].df
-    return_df = df[(df['Team']=='Unsold')].groupby(['Player','IPL Team'])['Base Total'].sum().to_frame().\
+    return_df = df[(df['Team'].isin(players.keys()))].groupby(['Player','IPL Team'])['Base Total'].sum().to_frame().\
                 sort_values(by=['Base Total','Player'],ascending=[False,True]).reset_index()
     return return_df.to_dict(orient='records')
 
@@ -358,7 +364,7 @@ def team_player_df(team,year):
     df = dbm[year].stats
     print(df.columns)
     return_df = df[(df['Team']==team)]
-    return_df = return_df[['Player',#'Type','IPL Team',
+    return_df = return_df[['Player','IPL Team',
                          'Appearance Points','Batting Points','Bowling Points','Fielding Points','Total Points',
                          'Total Matches','C Matches','VC Matches','Points per Match']]
     return_df['Points per Match'] = return_df['Points per Match'].astype('float').round(2)
@@ -370,7 +376,7 @@ def team_player_df(team,year):
 def value_df(year):
     df = dbm[year].df
     dfp=dbm[year].player_info[['Player','Sold_Price']]
-    return_df = df[(df['Team']!='Unsold')].groupby(by=['Player','Type','IPL Team','Team'])['Base Total'].sum().to_frame().reset_index()
+    return_df = df[(df['Team'].isin(players.keys()))].groupby(by=['Player','IPL Team','Team'])['Base Total'].sum().to_frame().reset_index()
     df_new=pd.merge(return_df,dfp,left_on='Player',right_on='Player')
 #df_new=df_new[(df_new['
     df_new['Points per Lakh'] =  np.round(df_new['Base Total']/df_new['Sold_Price'],2)
@@ -439,7 +445,7 @@ def sun_graph(award:str,year):
     df = dbm[year].df
     multipliers={'Wickets':20,'Catches':8,'Sixes':2}
 
-    df=df[['Team','Player',award]]
+    df=df[(df['Team'].isin(players.keys()))][['Team','Player',award]]
     df[award]//=multipliers.get(award,1)
     df1=df.groupby('Team').sum()
     labels = ['Total']
@@ -459,9 +465,11 @@ def sun_graph(award:str,year):
 def load_wagers(match:str,user=Depends(verify_jwt_token)):
 
         if match=='current':
-            match=schedf.loc[pd.Timestamp.now(tz='Asia/Kolkata'):].iloc[0]['Match Number']
+            match_data=schedf.loc[pd.Timestamp.now(tz='Asia/Kolkata'):].iloc[0]
+            match=match_data['Match Number']
+        
         blst=bets.find({'Match_No': match.replace('_',' ')},{'Match_Description':1,
-                                                             'Match_No':1,
+                                                                'Match_No':1,
         'Start_Time':1,
         'Venue':1,
         'Bets':1,
@@ -470,6 +478,7 @@ def load_wagers(match:str,user=Depends(verify_jwt_token)):
         blst['mybets']=blst[f"{user}_Bets"]
         del blst[f"{user}_Bets"]
         return blst
+
 
 @app.post('/setbet/{match:str}')
 async def load_wagers(request:Request,match:str,user=Depends(verify_jwt_token)):

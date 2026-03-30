@@ -18,7 +18,7 @@ def get_transfer_limits(db,user):
     return {'transfers':5-len(lst['transfer_history']), 'cap':2-len(lst['c_change_history']),'vcap':2-len(lst['vc_change_history'])}
 
 def get_match_ids(franchise,schedf, num_valid=20):
-    return list(schedf[(schedf.index >= pd.Timestamp.now()) & (schedf.home_team==franchise)|(schedf.away_team==franchise)].tail(num_valid)['index'].values)
+    return list(schedf[(schedf.index >= pd.Timestamp.now(tz='Asia/Kolkata')) & (schedf.home_team==franchise)|(schedf.away_team==franchise)].tail(num_valid)['index'].values)
 
 
 def update_transfers(overall_db,audit_db,player,dct,schedf):

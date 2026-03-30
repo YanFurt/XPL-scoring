@@ -177,7 +177,7 @@ async def login(response:Response,login_req:LoginReq):
         pwd = users_2026.find_one({'username':login_req.user,'password':login_req.password})
         
         if pwd:
-            response.set_cookie(key='XPL',value=create_jwt_token(login_req.user),httponly=True,secure=True,samesite="none")
+            response.set_cookie(key='XPL',value=create_jwt_token(login_req.user),httponly=True,secure=True,samesite="none",max_age=3600*7*24)
             return {'Status':'Success','User':login_req.user}
         else:
             return {'Status':'Failure'}

@@ -443,8 +443,10 @@ const handleConfirm = async ()=>{
   if(status=='Success'){
     const cap=team.find(p=>p.Captain)||{}
     const vcap=team.find(p=>p.Vice_Captain)||{}
+    
     setOriginal({cap,vcap})
     setOriginalBench(new Set(bench.map(p=>p.Player)))
+    setSubstitutions({in:[],out:[]})
     setBenchlogs([])
     setCaplog('')
     setVcaplog('');
@@ -452,6 +454,7 @@ const handleConfirm = async ()=>{
   }
   
 }
+
 
   return (
     <div>

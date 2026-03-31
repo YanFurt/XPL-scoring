@@ -278,6 +278,7 @@ export function BettingArena() {
   const [matchNo, setMatchNo] = useState("current");
   const [rows,setRows]=useState({})
   const [call,setCall] = useState(true)
+  const [sequence, setSequence] = useState(["current"])
 
 
   useEffect( ()=>{ 
@@ -285,6 +286,7 @@ export function BettingArena() {
         const bets = await getBets(matchNo);
         setRows(bets);
         setMatchNo(bets.Match_No.replace(' ','_'))
+        setSequence(Array.from({ length: 15 }, (_, index) => `Match_${index+1}`))
       })();}
       ,[call])
 
@@ -307,11 +309,7 @@ export function BettingArena() {
           label={matchNo.replace('_',' ')}
           onChange={(e) => [setMatchNo(e.target.value),setCall(!call)]}
         >
-          <MenuItem value="Match_1">Match 1</MenuItem>
-          <MenuItem value="Match_2">Match 2</MenuItem>
-          <MenuItem value="Match_3">Match 3</MenuItem>
-          <MenuItem value="Match_4">Match 4</MenuItem>
-          <MenuItem value="Match_5">Match 5</MenuItem>
+          {sequence.map((i) => (<MenuItem value={i}>{i.replace('_',' ')}</MenuItem>))}
         </Select>
       </FormControl>
 

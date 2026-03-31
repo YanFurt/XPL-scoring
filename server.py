@@ -17,7 +17,24 @@ import numpy as np
 from dotenv import load_dotenv
 
 from award_scoring import get_valid_metric
- 
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+
+
+
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Load the ML model
+    app.state.updating=False
+    yield
+    # Clean up the ML models and release the resources
+    
+
+
+
 load_dotenv()  
 mongostring=os.getenv("MONGO")
 players = json.loads(os.getenv("FRANCHISES"))
@@ -113,7 +130,7 @@ dbm_2025 = dbmanager(*load_db(overall_2025),load_players(players_2025),load_stat
 dbm={"2025":dbm_2025,"2026":dbm_2026}
 dbm2={"2025":players_2025,"2026":players_2026}
  
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 app.add_middleware(CORSMiddleware,allow_origins=['http://localhost:3000'],allow_methods=['GET','POST','OPTIONS'],allow_credentials=True)
 
 app.mount('/script',StaticFiles(directory="dist"), name="static")
@@ -229,12 +246,12 @@ def points_df(year):
         for i,j in prev_matches.iterrows():
             if not processed_matches.get(j['index']):
                 num_processed+=1
-                return_df,title,last_updated = live_match_scoring(db_2026,j)
+                return_df,title,last_updated = live_match_scoring(db_2026,j,app)
                 return_df=return_df[(return_df['Team']!='Unsold')&(return_df['Team']!='')][['Team','Total_Points', 'Total_Penalties']].groupby('Team').sum()
             
 
     if not num_processed:
-        print
+        app.state.updated=False
         return_df =pd.DataFrame(overall_2026.find({},{'Team':1,'Total_Points':1, 'Total_Penalties':1}).to_list())
         return_df=return_df[(return_df['Team']!='Unsold')&(return_df['Team']!='')][['Team','Total_Points', 'Total_Penalties']].groupby('Team').sum()
     

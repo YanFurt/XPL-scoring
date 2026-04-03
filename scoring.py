@@ -66,10 +66,10 @@ def live_match_scoring(db, match_data,app):
     stage = match_info['status']
     print('fetched match scorecard')
     if stage == 'RESULT':
-        if not app.state.updating:
-            print('calling scoring')
-            app.state.updating=True
-            match_check_wrapper(db,match_id)
+        # if not app.state.updating:
+        #     print('calling scoring')
+        #     app.state.updating=True
+        #     match_check_wrapper(db,match_id)
         return df.reset_index(), current_match, 'Updating... Refresh the page'
 
         

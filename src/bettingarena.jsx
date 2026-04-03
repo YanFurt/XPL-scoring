@@ -7,8 +7,10 @@ import {
   MenuItem,
   Typography,
 Paper,
-TextField,Button,Dialog,DialogActions,DialogContent,DialogTitle, Tooltip, Link, 
+TextField,Button,Dialog,DialogActions,DialogContent,DialogTitle, Tooltip, Link,   Table, TableHead, TableRow, TableCell,
+  TableBody, TableContainer
 } from "@mui/material";
+
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import Grid from "@mui/material/Grid";
 import dayjs from 'dayjs'
@@ -33,7 +35,7 @@ async function getBets(match) {
     }
     
     const data = await response.text();
-  
+    console.log(JSON.parse(data))
     return JSON.parse(data)
     //console.log(json);   i
   } catch (error) {
@@ -270,6 +272,7 @@ const TextInputGrid = ({ matchobj }) => {
           </Button>
         </DialogActions>
       </Dialog>
+      <hr></hr>
     </div>
   );
 };
@@ -277,14 +280,16 @@ const TextInputGrid = ({ matchobj }) => {
 export function BettingArena() {
   const [matchNo, setMatchNo] = useState("current");
   const [rows,setRows]=useState({})
+  const [tableRows,setTableRows] = useState([])
   const [call,setCall] = useState(true)
   const [sequence, setSequence] = useState(["current"])
 
 
   useEffect( ()=>{ 
       (async () => {
-        const bets = await getBets(matchNo);
+        const {bets,table_rows} = await getBets(matchNo);
         setRows(bets);
+        setTableRows(table_rows||[])
         setMatchNo(bets.Match_No.replace(' ','_'))
         setSequence(Array.from({ length: 15 }, (_, index) => `Match_${index+1}`))
       })();}
@@ -314,7 +319,102 @@ export function BettingArena() {
       </FormControl>
 
       <TextInputGrid matchobj={rows} />
+      {tableRows.length>0 ? <MultiIndexTable rows={tableRows}></MultiIndexTable>:<div></div>}
     </Box>
+    
   :<div></div>)
 }
 
+
+function MultiIndexTable({rows}) {
+  // ---- DATA (flattened like from Python) ----
+  const data = {
+    "Play it safe|Bet": { Alex: 20, Jinto: 30, Nihaar: 30, Sayak: 30, Swatantra: 0, Yannick: 20, Yatharth: 0 },
+    "Play it safe|Winnings": { Alex: -20, Jinto: -30, Nihaar: -30, Sayak: -30, Swatantra: 0, Yannick: -20, Yatharth: 0 },
+    "Take a shot!|Bet": { Alex: 0, Jinto: 0, Nihaar: 30, Sayak: 10, Swatantra: 0, Yannick: 20, Yatharth: 0 },
+    "Take a shot!|Winnings": { Alex: 0, Jinto: 0, Nihaar: 30, Sayak: 10, Swatantra: 0, Yannick: 20, Yatharth: 0 },
+    "Is it worth it?|Bet": { Alex: 0, Jinto: 20, Nihaar: 20, Sayak: 0, Swatantra: 0, Yannick: 0, Yatharth: 0 },
+    "Is it worth it?|Winnings": { Alex: 0, Jinto: -20, Nihaar: -20, Sayak: 0, Swatantra: 0, Yannick: 0, Yatharth: 0 },
+    "Only if you dare!|Bet": { Alex: 0, Jinto: 40, Nihaar: 20, Sayak: 60, Swatantra: 0, Yannick: 50, Yatharth: 0 },
+    "Only if you dare!|Winnings": { Alex: 0, Jinto: -40, Nihaar: -20, Sayak: -60, Swatantra: 0, Yannick: -50, Yatharth: 0 },
+    "Total|Bet": { Alex: 20, Jinto: 90, Nihaar: 100, Sayak: 100, Swatantra: 0, Yannick: 90, Yatharth: 0 },
+    "Total|Winnings": { Alex: -20, Jinto: -90, Nihaar: -40, Sayak: -80, Swatantra: 0, Yannick: -50, Yatharth: 0 }
+  };
+
+  // ---- PREPARE DATA ----
+  const players = Object.keys(data[Object.keys(data)[0]]);
+  const subcols=['Bet', 'Winnings']
+  const groupedColumns = ['Play it safe', 'Take a shot!', 'Is it worth it?', 'Only if you dare!','Total']
+
+
+  // ---- RENDER ----
+  return (
+    <TableContainer component={Paper}>
+      <Table>
+
+        {/* HEADER */}
+        <TableHead>
+          {/* Top header row */}
+          <TableRow>
+            <TableCell rowSpan={2}><b>Player</b></TableCell>
+            {groupedColumns.map((group) => (
+              <TableCell key={group} align="center" colSpan={2}>
+                <b>{group}</b>
+              </TableCell>
+            ))}
+          </TableRow>
+
+          {/* Sub header row */}
+          <TableRow>
+            {groupedColumns.map((group) =>
+              subcols.map(sub => (
+                <TableCell key={`${group}-${sub}`} align="center">
+                  {sub}
+                </TableCell>
+              ))
+            )}
+          </TableRow>
+        </TableHead>
+
+        {/* BODY */}
+        <TableBody>
+          {rows.map(row => (
+            <TableRow key={row.player}>
+              <TableCell><b>{row.player}</b></TableCell>
+
+              {Object.keys(data).map(col => {
+                const value = row[col];
+                const isWinnings = col.includes("Winnings");
+
+                return (
+                  <TableCell
+                    key={col}
+                    align="center"
+                    sx={{
+                      color:
+                        isWinnings && value > 0
+                          ? "success.main"
+                          : isWinnings && value < 0
+                          ? "error.main"
+                          : "inherit",
+                      fontWeight: isWinnings ? 600 : "normal",
+                      backgroundColor:
+                        isWinnings && value > 0
+                          ? "rgba(76, 175, 80, 0.1)"
+                          : isWinnings && value < 0
+                          ? "rgba(244, 67, 54, 0.1)"
+                          : "inherit"
+                    }}
+                  >
+                    {value}
+                  </TableCell>
+                );
+              })}
+            </TableRow>
+          ))}
+        </TableBody>
+
+      </Table>
+    </TableContainer>
+  );
+}

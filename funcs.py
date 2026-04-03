@@ -6,7 +6,10 @@ import os,json
 
 load_dotenv()  
 
+def get_bet_score(cancel, multiplier, success, bet):
 
+    score = {k: (not cancel[k]) * ((multiplier[k] * success[k] * bet[k]) - bet[k]) for k in multiplier}
+    return score
 
 def get_player_games(db,pnames):
     players = db.find({'_id':{'$in':pnames}},{'_id':1,	'Player':1,	"IPL_Team":1,'Base_Matches':1}).to_list()

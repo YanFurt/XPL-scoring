@@ -7,12 +7,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, RedirectResponse,FileResponse,Response
 from security import verify_jwt_token,create_jwt_token,LoginReq
-from funcs import update_transfers
+from funcs import update_transfers,get_bet_score
 from scoring import live_match_scoring,match_check_wrapper
 
 from pymongo import MongoClient ,UpdateOne, UpdateMany
 import datetime as dt 
-from datetime import timedelta
+from datetime import timedelta,datetime
 import numpy as np
 from dotenv import load_dotenv
 
@@ -38,6 +38,7 @@ async def lifespan(app: FastAPI):
 load_dotenv()  
 mongostring=os.getenv("MONGO")
 players = json.loads(os.getenv("FRANCHISES"))
+participants_2026 = json.loads(os.getenv("PARTICIPANTS_2026"))
 print(players)
 client = MongoClient(mongostring)
 
@@ -484,17 +485,56 @@ def load_wagers(match:str,user=Depends(verify_jwt_token)):
         if match=='current':
             match_data=schedf.loc[pd.Timestamp.now(tz='Asia/Kolkata'):].iloc[0]
             match=match_data['Match Number']
-        
-        blst=bets.find({'Match_No': match.replace('_',' ')},{'Match_Description':1,
-                                                                'Match_No':1,
+        else:
+            match_data=schedf[schedf['Match Number']==match.replace('_',' ')].iloc[0]
+
+        match=match_data['Match Number']
+        match_started=False
+
+
+        fetch_fields={'Match_Description':1, 'Match_No':1,
         'Start_Time':1,
         'Venue':1,
         'Bets':1,
         'Chances':1,
-        f"{user}_Bets":1}).to_list()[0]
+        f"{user}_Bets":1}
+
+        if pd.Timestamp.now(tz='Asia/Kolkata')>match_data.name:
+            match_started=True
+            fetch_fields=None
+        
+        
+        blst=bets.find({'Match_No': match.replace('_',' ')},projection=fetch_fields).to_list()[0]
         blst['mybets']=blst[f"{user}_Bets"]
-        del blst[f"{user}_Bets"]
-        return blst
+
+        if match_started:
+            bets_df = pd.DataFrame([blst]).set_index('_id')
+            match_id=match_data['index']
+
+            bet_cols = [p+'_Bets' for p in participants_2026]
+            score_cols = [p+'_Score' for p in participants_2026]
+            bets_df = bets_df.loc[int(match_id),['Cancelled_Flag','Multiplier','Event_Success']+bet_cols]
+          
+            for participant in participants_2026:
+                
+                bets_df[f'{participant}_Score'] = get_bet_score(bets_df['Cancelled_Flag'],bets_df['Multiplier'],bets_df['Event_Success'],bets_df[participant+'_Bets'])
+
+            bets_info = bets_df[bet_cols]
+            bets_score = bets_df[score_cols]
+            bets_info_df = pd.DataFrame(bets_info.to_list(), index = bets_info.index).rename(index = lambda x:x.split('_')[0])
+            bets_info_df['Total']=bets_info_df.sum(axis=1)
+            bets_score_df = pd.DataFrame(bets_score.to_list(), index = bets_score.index).rename(index = lambda x:x.split('_')[0])
+            bets_score_df['Total']=bets_score_df.sum(axis=1)
+            bets_final_df = pd.merge(bets_info_df, bets_score_df, left_index=True, right_index=True, suffixes = ('|Bet','|Winnings'))
+            bets_final_df = bets_final_df.reset_index().rename(columns={"index": "player"})
+            bets_final_df.fillna('-')
+
+            return {'bets':blst,'table_rows': bets_final_df.to_dict(orient="records")}
+
+                    
+
+
+        return {'bets':blst}
 
 
 @app.post('/setbet/{match:str}')

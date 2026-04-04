@@ -499,7 +499,7 @@ def load_wagers(match:str,user=Depends(verify_jwt_token)):
         'Chances':1,
         f"{user}_Bets":1}
 
-        if pd.Timestamp.now(tz='Asia/Kolkata')>match_data.name:
+        if pd.Timestamp.now(tz='Asia/Kolkata')>match_data.name-timedelta(minutes=30):
             match_started=True
             fetch_fields=None
         
@@ -527,7 +527,9 @@ def load_wagers(match:str,user=Depends(verify_jwt_token)):
             bets_score_df['Total']=bets_score_df.sum(axis=1)
             bets_final_df = pd.merge(bets_info_df, bets_score_df, left_index=True, right_index=True, suffixes = ('|Bet','|Winnings'))
             bets_final_df = bets_final_df.reset_index().rename(columns={"index": "player"})
-            bets_final_df.fillna('-')
+            bets_final_df.fillna(0,inplace=True)
+            del blst['Event_Success']
+         
 
             return {'bets':blst,'table_rows': bets_final_df.to_dict(orient="records")}
 

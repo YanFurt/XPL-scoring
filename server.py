@@ -265,16 +265,16 @@ def points_df(year):
     bets_df = bets_df[bets_df['_id'].isin(completed_matches.keys())]
 
     #Function to calculate bet score based on multiplier, success, and bet amount 
-    def get_bet_score(multiplier, success, bet):
+    def get_bet_score(cancel, multiplier, success, bet):
 
-        score = {k: (multiplier[k] * success[k] * bet[k]) - bet[k] for k in multiplier}
+        score = {k: (not cancel[k]) * ((multiplier[k] * success[k] * bet[k]) - bet[k]) for k in multiplier}
         sum_score = sum(score.values())
         return sum_score
     
     #Assigning bet score
     for participant in ['Alex', 'Jinto', 'Nihaar', 'Sayak', 'Swatantra', 'Yannick', 'Yatharth']:
         participant_col = f'{participant}_Bets'
-        bets_df[f'{participant}_Score'] = bets_df.apply(lambda row: get_bet_score(row['Multiplier'],row['Event_Success'],row[participant_col]), axis = 1)
+        bets_df[f'{participant}_Score'] = bets_df.apply(lambda row: get_bet_score(row['Cancelled_Flag'], row['Multiplier'],row['Event_Success'],row[participant_col]), axis = 1)
 
     #Unpivoting the table
     score_cols = [p+'_Score' for p in ['Alex', 'Jinto', 'Nihaar', 'Sayak', 'Swatantra', 'Yannick', 'Yatharth']]

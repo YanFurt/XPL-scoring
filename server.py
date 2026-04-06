@@ -16,11 +16,11 @@ from datetime import timedelta,datetime
 import numpy as np
 from dotenv import load_dotenv
 
-from award_scoring import get_valid_metric
+from award_scoring import get_bet_score, get_bet_metrics, get_valid_metric
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-
+from collections import Counter
 
 
 
@@ -263,13 +263,6 @@ def points_df(year):
     #Bets success flags
     bets_df = pd.DataFrame([d for d in db_2026['Bets'].find({})])
     bets_df = bets_df[bets_df['_id'].isin(completed_matches.keys())]
-
-    #Function to calculate bet score based on multiplier, success, and bet amount 
-    def get_bet_score(cancel, multiplier, success, bet):
-
-        score = {k: (not cancel[k]) * ((multiplier[k] * success[k] * bet[k]) - bet[k]) for k in multiplier}
-        sum_score = sum(score.values())
-        return sum_score
     
     #Assigning bet score
     for participant in ['Alex', 'Jinto', 'Nihaar', 'Sayak', 'Swatantra', 'Yannick', 'Yatharth']:
@@ -300,18 +293,83 @@ def rename_player(capi,cinfo):
 
     return 'Name updated'
 
+#Avengers Assemble table
+@app.post('/{year:str}/awards/Fantasy')
+def dots_df(year):
+    if year == '2026':
+        overall_df = pd.DataFrame([d for d in overall_2026.find({})]).set_index('_id')
+        overall_points_df = overall_df.groupby('Team')[['Total_Points','Total_Matches']].sum()
+        return_df = overall_points_df[overall_points_df.index.isin(participants_2026)].reset_index().rename(columns={'Total_Points':'Fantasy Points','Total_Matches':'Effective Matches'}).sort_values(by = ['Fantasy Points','Effective Matches'], ascending = [False,True])
+    return return_df.to_dict(orient='records')
+
+#Spidey Sense table
+@app.post('/{year:str}/awards/Betting')
+def dots_df(year):
+    if year == '2026':
+        #Getting completed matches from live status
+        matches = [d for d in db_2026['Live Status'].find({})][0]['Processed Matches']
+        completed_matches = {int(k):v for k,v in matches.items() if v}
+
+        #Bets success flags
+        bets_df = pd.DataFrame([d for d in db_2026['Bets'].find({})])
+        bets_df = bets_df[bets_df['_id'].isin(completed_matches.keys())]
+        completed_bets_df = bets_df[bets_df.index.isin(completed_matches.keys())]
+
+        for participant in participants_2026:
+            participant_col = f'{participant}_Bets'
+            completed_bets_df[f'{participant}_Score'] = completed_bets_df.apply(lambda row: get_bet_score(row['Cancelled_Flag'], row['Multiplier'],row['Event_Success'],row[participant_col]), axis = 1)
+
+        overall_bets_df = pd.DataFrame(index = participants_2026)
+        overall_bets_df['Bets'] = None
+        overall_bets_df['Points'] = None
+        for p in participants_2026:
+            overall_bets_df.at[p,'Bets'] = get_bet_metrics(p,'Bets', completed_bets_df)
+            overall_bets_df.at[p,'Points'] = get_bet_metrics(p,'Score', completed_bets_df)
+
+        bets_info_df = overall_bets_df['Bets'].apply(pd.Series)
+        bets_score_df = overall_bets_df['Points'].apply(pd.Series)
+        bets_info_df.columns = pd.MultiIndex.from_product([bets_info_df.columns, ['Bets']])
+        bets_score_df.columns = pd.MultiIndex.from_product([bets_score_df.columns, ['Points']])
+        bets_final_df = pd.merge(bets_info_df, bets_score_df, left_index=True, right_index=True)
+        base_order = pd.unique(np.array([c[0] for c in bets_final_df.columns]))
+        new_cols = [(base, sub) for base in base_order for sub in ['Bets', 'Points']]
+        bets_final_df = bets_final_df.reindex(columns=new_cols).fillna(0)
+        bets_final_df[('Total', 'Bets')] = bets_final_df.xs('Bets', axis=1, level=1).sum(axis=1)
+        bets_final_df[('Total', 'Points')] = bets_final_df.xs('Points', axis=1, level=1).sum(axis=1)
+
+        return_df = bets_final_df.sort_values(by = [('Total','Points'),('Total','Bets')], ascending=[False,True])
+    return return_df.to_dict(orient='records')
+
+#Direct Hit Returns table
+@app.post('/{year:str}/awards/Player of the Match')
+def dots_df(year):
+    if year == '2026':
+        matches_df = pd.DataFrame([d for d in match_2026.find({})]).set_index('_id')
+        overall_df = pd.DataFrame([d for d in overall_2026.find({})]).set_index('_id')
+        overall_matches_df = overall_df.groupby('Team')['Valid_Matches'].sum()
+        participants = ['Alex','Jinto','Nihaar','Sayak','Swatantra','Yannick','Yatharth']
+        awards_df = pd.DataFrame(index = participants)
+        for p in participants:
+            awards_df.loc[p,'POM Awards'] = get_valid_metric(p,'POM_Awards',matches_df)
+            awards_df.loc[p,'Total Matches'] = overall_matches_df[p]
+        awards_df = awards_df.reset_index(names='Team')
+        return_df = awards_df[['Team','POM Awards','Total Matches']].sort_values(by=['POM Awards','Total Matches'],ascending=[False, True])
+    return return_df.to_dict(orient='records')
 
 #Orange Cap table
 @app.post('/{year:str}/awards/Runs')
 def runs_df(year):
     if year == '2026':
         matches_df = pd.DataFrame([d for d in match_2026.find({})]).set_index('_id')
+        overall_df = pd.DataFrame([d for d in overall_2026.find({})]).set_index('_id')
+        overall_matches_df = overall_df.groupby('Team')['Valid_Matches'].sum()
         participants = ['Alex','Jinto','Nihaar','Sayak','Swatantra','Yannick','Yatharth']
         awards_df = pd.DataFrame(index = participants)
         for p in participants:
             awards_df.loc[p,'Runs'] = get_valid_metric(p,'Runs',matches_df)
+            awards_df.loc[p,'Total Matches'] = overall_matches_df[p]
         awards_df = awards_df.reset_index(names='Team')
-        return_df = awards_df[['Team','Runs']].sort_values(by='Runs',ascending=False)
+        return_df = awards_df[['Team','Runs','Total Matches']].sort_values(by=['Runs','Total Matches'],ascending=[False, True])
     else:
         df = dbm[year].df
         return_df = df[(df['Team']!='Unsold')].groupby(['Team'])[['Runs','Total Matches']].sum().\
@@ -321,37 +379,117 @@ def runs_df(year):
 #Purple Cap table
 @app.post('/{year:str}/awards/Wickets')
 def wickets_df(year):
-    df = dbm[year].df
-    return_df = df[(df['Team'].isin(players.keys()))].groupby(['Team'])[['Wickets','Total Matches']].sum().\
-                sort_values(by=['Wickets','Total Matches'],ascending=[False,True]).reset_index()
-    return_df['Wickets'] //= 20
+    if year == '2026':
+        matches_df = pd.DataFrame([d for d in match_2026.find({})]).set_index('_id')
+        overall_df = pd.DataFrame([d for d in overall_2026.find({})]).set_index('_id')
+        overall_matches_df = overall_df.groupby('Team')['Valid_Matches'].sum()
+        participants = ['Alex','Jinto','Nihaar','Sayak','Swatantra','Yannick','Yatharth']
+        awards_df = pd.DataFrame(index = participants)
+        for p in participants:
+            awards_df.loc[p,'Wickets'] = get_valid_metric(p,'Wickets',matches_df)
+            awards_df.loc[p,'Total Matches'] = overall_matches_df[p]
+        awards_df = awards_df.reset_index(names='Team')
+        return_df = awards_df[['Team','Wickets','Total Matches']].sort_values(by=['Wickets','Total Matches'],ascending=[False, True])
+    else:
+        df = dbm[year].df
+        return_df = df[(df['Team'].isin(players.keys()))].groupby(['Team'])[['Wickets','Total Matches']].sum().\
+                    sort_values(by=['Wickets','Total Matches'],ascending=[False,True]).reset_index()
+        return_df['Wickets'] //= 20
     
     return return_df.to_dict(orient='records')
 
 #KFC Bucket Hands table
 @app.post('/{year:str}/awards/Catches')
 def catches_df(year):
-    df = dbm[year].df
-    return_df = df[(df['Team'].isin(players.keys()))].groupby(['Team'])[['Catches','Total Matches']].sum().\
-                sort_values(by=['Catches','Total Matches'],ascending=[False,True]).reset_index()
-    return_df['Catches'] //= 8
+    if year == '2026':
+        matches_df = pd.DataFrame([d for d in match_2026.find({})]).set_index('_id')
+        overall_df = pd.DataFrame([d for d in overall_2026.find({})]).set_index('_id')
+        overall_matches_df = overall_df.groupby('Team')['Valid_Matches'].sum()
+        participants = ['Alex','Jinto','Nihaar','Sayak','Swatantra','Yannick','Yatharth']
+        awards_df = pd.DataFrame(index = participants)
+        for p in participants:
+            awards_df.loc[p,'Catches'] = get_valid_metric(p,'Catches',matches_df)
+            awards_df.loc[p,'Total Matches'] = overall_matches_df[p]
+        awards_df = awards_df.reset_index(names='Team')
+        return_df = awards_df[['Team','Catches','Total Matches']].sort_values(by=['Catches','Total Matches'],ascending=[False, True])
+    else:
+        df = dbm[year].df
+        return_df = df[(df['Team'].isin(players.keys()))].groupby(['Team'])[['Catches','Total Matches']].sum().\
+                    sort_values(by=['Catches','Total Matches'],ascending=[False,True]).reset_index()
+        return_df['Catches'] //= 8
     return return_df.to_dict(orient='records')
 
 #ISRO Rocket Launcher table
 @app.post('/{year:str}/awards/Sixes')
 def sixes_df(year):
-    df = dbm[year].df
-    return_df = df[(df['Team'].isin(players.keys()))].groupby(['Team'])[['Sixes','Total Matches']].sum().\
-                sort_values(by=['Sixes','Total Matches'],ascending=[False,True]).reset_index()
-    return_df['Sixes'] //= 2
-    return return_df.to_dict(orient='records')
+    if year == '2026':
+        matches_df = pd.DataFrame([d for d in match_2026.find({})]).set_index('_id')
+        overall_df = pd.DataFrame([d for d in overall_2026.find({})]).set_index('_id')
+        overall_matches_df = overall_df.groupby('Team')['Valid_Matches'].sum()
+        participants = ['Alex','Jinto','Nihaar','Sayak','Swatantra','Yannick','Yatharth']
+        awards_df = pd.DataFrame(index = participants)
+        for p in participants:
+            awards_df.loc[p,'Sixes'] = get_valid_metric(p,'Sixes',matches_df)
+            awards_df.loc[p,'Total Matches'] = overall_matches_df[p]
+        awards_df = awards_df.reset_index(names='Team')
+        return_df = awards_df[['Team','Sixes','Total Matches']].sort_values(by=['Sixes','Total Matches'],ascending=[False, True])
+    else:
+        df = dbm[year].df
+        return_df = df[(df['Team'].isin(players.keys()))].groupby(['Team'])[['Sixes','Total Matches']].sum().\
+                    sort_values(by=['Sixes','Total Matches'],ascending=[False,True]).reset_index()
+        return_df['Sixes'] //= 2
+        return return_df.to_dict(orient='records')
 
 #Harry Dotter table
 @app.post('/{year:str}/awards/Dots')
 def dots_df(year):
-    df = dbm[year].df
-    return_df = df[(df['Team'].isin(players.keys()))].groupby(['Team'])[['Dots','Total Matches']].sum().\
-                sort_values(by=['Dots','Total Matches'],ascending=[False,True]).reset_index()   
+    if year == '2026':
+        matches_df = pd.DataFrame([d for d in match_2026.find({})]).set_index('_id')
+        overall_df = pd.DataFrame([d for d in overall_2026.find({})]).set_index('_id')
+        overall_matches_df = overall_df.groupby('Team')['Valid_Matches'].sum()
+        participants = ['Alex','Jinto','Nihaar','Sayak','Swatantra','Yannick','Yatharth']
+        awards_df = pd.DataFrame(index = participants)
+        for p in participants:
+            awards_df.loc[p,'Dots'] = get_valid_metric(p,'Dots',matches_df)
+            awards_df.loc[p,'Total Matches'] = overall_matches_df[p]
+        awards_df = awards_df.reset_index(names='Team')
+        return_df = awards_df[['Team','Dots','Total Matches']].sort_values(by=['Dots','Total Matches'],ascending=[False, True])
+    else:
+        df = dbm[year].df
+        return_df = df[(df['Team'].isin(players.keys()))].groupby(['Team'])[['Dots','Total Matches']].sum().\
+                    sort_values(by=['Dots','Total Matches'],ascending=[False,True]).reset_index()   
+    return return_df.to_dict(orient='records')
+
+#Star Striker table
+@app.post('/{year:str}/awards/Strike Rate')
+def dots_df(year):
+    if year == '2026':
+        matches_df = pd.DataFrame([d for d in match_2026.find({})]).set_index('_id')
+        overall_df = pd.DataFrame([d for d in overall_2026.find({})]).set_index('_id')
+        overall_matches_df = overall_df.groupby('Team')['Valid_Matches'].sum()
+        participants = ['Alex','Jinto','Nihaar','Sayak','Swatantra','Yannick','Yatharth']
+        awards_df = pd.DataFrame(index = participants)
+        for p in participants:
+            awards_df.loc[p,'Aggregate Strike Rate'] = 100*get_valid_metric(p,'Runs', matches_df)/get_valid_metric(p,'Balls_Faced', matches_df) if get_valid_metric(p,'Balls_Faced',matches_df)!=0 else 0
+            awards_df.loc[p,'Total Matches'] = overall_matches_df[p]
+        awards_df = awards_df.reset_index(names='Team')
+        return_df = awards_df[['Team','Aggregate Strike Rate','Total Matches']].sort_values(by=['Aggregate Strike Rate','Total Matches'],ascending=[False, True])
+    return return_df.to_dict(orient='records')
+
+#Control in Chaos table
+@app.post('/{year:str}/awards/Economy Rate')
+def dots_df(year):
+    if year == '2026':
+        matches_df = pd.DataFrame([d for d in match_2026.find({})]).set_index('_id')
+        overall_df = pd.DataFrame([d for d in overall_2026.find({})]).set_index('_id')
+        overall_matches_df = overall_df.groupby('Team')['Valid_Matches'].sum()
+        participants = ['Alex','Jinto','Nihaar','Sayak','Swatantra','Yannick','Yatharth']
+        awards_df = pd.DataFrame(index = participants)
+        for p in participants:
+            awards_df.loc[p,'Aggregate Economy Rate'] = 6*get_valid_metric(p,'Runs_Conceded', matches_df)/get_valid_metric(p,'Balls_Bowled', matches_df) if get_valid_metric(p,'Balls_Bowled',matches_df)!=0 else 0
+            awards_df.loc[p,'Total Matches'] = overall_matches_df[p]
+        awards_df = awards_df.reset_index(names='Team')
+        return_df = awards_df[['Team','Aggregate Economy Rate','Total Matches']].sort_values(by=['Aggregate Economy Rate','Total Matches'],ascending=[True, True])
     return return_df.to_dict(orient='records')
 
 #Sold player by base points

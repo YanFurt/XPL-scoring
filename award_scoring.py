@@ -1,3 +1,22 @@
+#Function to calculate bet score based on multiplier, success, and bet amount 
+from collections import Counter
+import pandas as pd
+
+def get_bet_score(cancel, multiplier, success, bet):
+
+    score = {k: (not cancel[k]) * ((multiplier[k] * success[k] * bet[k]) - bet[k]) for k in multiplier}
+    sum_score = sum(score.values())
+    return sum_score
+
+def get_bet_metrics(p, metric, df):
+    result = Counter()
+    for d in df[f'{p}_{metric}']:
+        cleaned = {k: (0 if pd.isna(v) else v)for k, v in d.items()}
+        result.update(cleaned)
+
+    return dict(result)
+
+#Awards metrics
 def get_valid_metric(p, metric, df):
     div = 1
     if metric == 'Wickets':

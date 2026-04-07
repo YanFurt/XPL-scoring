@@ -185,7 +185,7 @@ function displayMsg(payload,lookup,limits) {
               } );
 
   if (caps){
-  const diff=lookup[caps[1]].Matches-lookup[caps[0]]?.Matches;
+  const diff=lookup[caps[1]].Matches-lookup[caps[0]].Matches;
   if (diff>0){
     caplog= `\n${lookup[caps[0]].Player} will start captaining after ${diff} matches`
   }

@@ -328,21 +328,19 @@ export function BettingArena() {
 
 function MultiIndexTable({rows}) {
   // ---- DATA (flattened like from Python) ----
-  const data = {
-    "Play it safe|Bet": { Alex: 20, Jinto: 30, Nihaar: 30, Sayak: 30, Swatantra: 0, Yannick: 20, Yatharth: 0 },
-    "Play it safe|Winnings": { Alex: -20, Jinto: -30, Nihaar: -30, Sayak: -30, Swatantra: 0, Yannick: -20, Yatharth: 0 },
-    "Take a shot!|Bet": { Alex: 0, Jinto: 0, Nihaar: 30, Sayak: 10, Swatantra: 0, Yannick: 20, Yatharth: 0 },
-    "Take a shot!|Winnings": { Alex: 0, Jinto: 0, Nihaar: 30, Sayak: 10, Swatantra: 0, Yannick: 20, Yatharth: 0 },
-    "Is it worth it?|Bet": { Alex: 0, Jinto: 20, Nihaar: 20, Sayak: 0, Swatantra: 0, Yannick: 0, Yatharth: 0 },
-    "Is it worth it?|Winnings": { Alex: 0, Jinto: -20, Nihaar: -20, Sayak: 0, Swatantra: 0, Yannick: 0, Yatharth: 0 },
-    "Only if you dare!|Bet": { Alex: 0, Jinto: 40, Nihaar: 20, Sayak: 60, Swatantra: 0, Yannick: 50, Yatharth: 0 },
-    "Only if you dare!|Winnings": { Alex: 0, Jinto: -40, Nihaar: -20, Sayak: -60, Swatantra: 0, Yannick: -50, Yatharth: 0 },
-    "Total|Bet": { Alex: 20, Jinto: 90, Nihaar: 100, Sayak: 100, Swatantra: 0, Yannick: 90, Yatharth: 0 },
-    "Total|Winnings": { Alex: -20, Jinto: -90, Nihaar: -40, Sayak: -80, Swatantra: 0, Yannick: -50, Yatharth: 0 }
-  };
+  
 
   // ---- PREPARE DATA ----
-  const players = Object.keys(data[Object.keys(data)[0]]);
+  const datakeys = ["Play it safe|Bet",
+    "Play it safe|Winnings",
+    "Take a shot!|Bet",
+    "Take a shot!|Winnings",
+    "Is it worth it?|Bet",
+    "Is it worth it?|Winnings",
+    "Only if you dare!|Bet",
+    "Only if you dare!|Winnings",
+    "Total|Bet",
+    "Total|Winnings"]
   const subcols=['Bet', 'Winnings']
   const groupedColumns = ['Play it safe', 'Take a shot!', 'Is it worth it?', 'Only if you dare!','Total']
 
@@ -382,7 +380,7 @@ function MultiIndexTable({rows}) {
             <TableRow key={row.player}>
               <TableCell><b>{row.player}</b></TableCell>
 
-              {Object.keys(data).map(col => {
+              {datakeys.map(col => {
                 const value = row[col];
                 const isWinnings = col.includes("Winnings");
 

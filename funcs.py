@@ -6,7 +6,7 @@ import os,json
 
 load_dotenv()  
 
-def get_bet_score(cancel, multiplier, success, bet):
+def get_bet_score1(cancel, multiplier, success, bet):
 
     score = {k: (not cancel[k]) * ((multiplier[k] * success[k] * bet[k]) - bet[k]) for k in multiplier}
     return score

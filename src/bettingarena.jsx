@@ -291,7 +291,7 @@ export function BettingArena() {
         setRows(bets);
         setTableRows(table_rows||[])
         setMatchNo(bets.Match_No.replace(' ','_'))
-        setSequence(Array.from({ length: 15 }, (_, index) => `Match_${index+1}`))
+        setSequence(Array.from({ length: 70 }, (_, index) => `Match_${index+1}`))
       })();}
       ,[call])
 

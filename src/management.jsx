@@ -185,15 +185,16 @@ function displayMsg(payload,lookup,limits) {
               } );
 
   if (caps){
-  const diff=lookup[caps[1]]?.Matches||0-lookup[caps[0]]?.Matches||0;
+  const diff=lookup[caps[1]].Matches-lookup[caps[0]].Matches;
   if (diff>0){
     caplog= `\n${lookup[caps[0]].Player} will start captaining after ${diff} matches`
   }
 }
 
 if (vcaps){
-  
-  const diff=lookup[vcaps[1]]?.Matches||0-lookup[vcaps[0]]?.Matches||0;
+  console.log(vcaps)
+  console.log(lookup)
+  const diff=lookup[vcaps[1]].Matches-lookup[vcaps[0]].Matches;
   if (diff>0){
     vcaplog= `\n${lookup[vcaps[0]].Player} will start vice-captaining after ${diff} matches`
   }

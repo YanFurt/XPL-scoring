@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, RedirectResponse,FileResponse,Response
 from security import verify_jwt_token,create_jwt_token,LoginReq
-from funcs import update_transfers,get_bet_score
+from funcs import update_transfers,get_bet_score1
 from scoring import live_match_scoring,match_check_wrapper
 
 from pymongo import MongoClient ,UpdateOne, UpdateMany
@@ -646,26 +646,38 @@ def load_wagers(match:str,user=Depends(verify_jwt_token)):
         blst['mybets']=blst[f"{user}_Bets"]
 
         if match_started:
-            bets_df = pd.DataFrame([blst]).set_index('_id')
+            bets_df1 = pd.DataFrame([blst]).set_index('_id')
+            
             match_id=match_data['index']
 
             bet_cols = [p+'_Bets' for p in participants_2026]
             score_cols = [p+'_Score' for p in participants_2026]
-            bets_df = bets_df.loc[int(match_id),['Cancelled_Flag','Multiplier','Event_Success']+bet_cols]
+            bets_df1 = bets_df1.loc[int(match_id),['Cancelled_Flag','Multiplier','Event_Success']+bet_cols]
+            
           
             for participant in participants_2026:
                 
-                bets_df[f'{participant}_Score'] = get_bet_score(bets_df['Cancelled_Flag'],bets_df['Multiplier'],bets_df['Event_Success'],bets_df[participant+'_Bets'])
+                bets_df1[f'{participant}_Score'] = get_bet_score1(bets_df1['Cancelled_Flag'],bets_df1['Multiplier'],bets_df1['Event_Success'],bets_df1[participant+'_Bets'])
 
-            bets_info = bets_df[bet_cols]
-            bets_score = bets_df[score_cols]
-            bets_info_df = pd.DataFrame(bets_info.to_list(), index = bets_info.index).rename(index = lambda x:x.split('_')[0])
-            bets_info_df['Total']=bets_info_df.sum(axis=1)
-            bets_score_df = pd.DataFrame(bets_score.to_list(), index = bets_score.index).rename(index = lambda x:x.split('_')[0])
-            bets_score_df['Total']=bets_score_df.sum(axis=1)
-            bets_final_df = pd.merge(bets_info_df, bets_score_df, left_index=True, right_index=True, suffixes = ('|Bet','|Winnings'))
+            bets_info1 = bets_df1[bet_cols]
+            print('a')
+            print(bets_info1)
+            bets_score1 = bets_df1[score_cols]
+            print(bets_df1)
+            print('b')
+            print(bets_score1)
+            bets_info1_df = pd.DataFrame(bets_info1.to_list(), index = bets_info1.index).rename(index = lambda x:x.split('_')[0])
+            bets_info1_df['Total']=bets_info1_df.sum(axis=1)
+            print('c')
+            print(bets_info1_df)
+            bets_score1_df = pd.DataFrame(bets_score1.to_list(), index = bets_score1.index).rename(index = lambda x:x.split('_')[0])
+            bets_score1_df['Total']=bets_score1_df.sum(axis=1)
+            print('d')
+            print(bets_score1_df)
+            bets_final_df = pd.merge(bets_info1_df, bets_score1_df, left_index=True, right_index=True, suffixes = ('|Bet','|Winnings'))
             bets_final_df = bets_final_df.reset_index().rename(columns={"index": "player"})
             bets_final_df.fillna(0,inplace=True)
+
             del blst['Event_Success']
          
 
@@ -678,7 +690,7 @@ def load_wagers(match:str,user=Depends(verify_jwt_token)):
 
 
 @app.post('/setbet/{match:str}')
-async def load_wagers(request:Request,match:str,user=Depends(verify_jwt_token)):
+async def set_wagers(request:Request,match:str,user=Depends(verify_jwt_token)):
         payload = await request.json()
         blst=bets.update_one({'Match_No': match.replace('_',' ')},{ "$set": { f"{user}_Bets": payload }})
         return 'Success'

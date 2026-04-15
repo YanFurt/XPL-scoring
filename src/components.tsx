@@ -131,6 +131,8 @@ function BasicTable({rows}) {
    }
 
    function AwardTable({rows, colname}) {
+    const cols=Object.keys(rows[0]||{})||[]
+    console.log(cols)
     return ( 
       <div >
       <TableContainer component={Paper}  >
@@ -148,11 +150,9 @@ function BasicTable({rows}) {
                 key={row.Team}
                 sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
               >
-                <TableCell component="th" scope="row">
-                  {franchises[row.Team]}
-                </TableCell>
-                <TableCell align="center">{row[colname]}</TableCell>
-                <TableCell align="center">{row['Total Matches']}</TableCell>
+                <TableCell align="left">{row.Team}</TableCell>
+                <TableCell align="center">{['EconomyRate','StrikeRate'].includes(cols[1])?row[cols[1]].toFixed(2):row[cols[1]]}</TableCell>
+                <TableCell align="center">{row[cols[2]]}</TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -218,7 +218,7 @@ export function PointsTable  () {
 export const Navbar =({user,updater,year,yearupdater})=>{
   //const [time,setTime] = useState('Last updated: -')
    //const arr = ['Spartan Warriors', 'Merciless Strikers','Fireballs','Trailblazers','Knight Riders','Invincibles','Storm Troopers']
-   const awards = ['Runs', 'Wickets', 'Dots','Sixes','Catches']
+   const awards = ['Runs', 'Wickets', 'Dots','Sixes','Catches','Fantasy','Betting','POTM','StrikeRate','EconomyRate']
    const misc = ['Sold Player Stats', 'Unsold Player Stats','MVPs','Player Status']
    
    const navigate=useNavigate() 
@@ -262,12 +262,12 @@ export const Navbar =({user,updater,year,yearupdater})=>{
       {misc.map((a)=><NavLink className='Navlink' key={a} style={{ marginRight: 10 }} to={`/${year}/stats/${a.replaceAll(' ','')}`}>{a}</NavLink>)}
       </div>
     </div>
-    <div className="dropdown">
+    {/* <div className="dropdown">
       <select className="dropbtn" onChange={handleSelect}>
         <option value="2026">XPL 2026</option>
         <option value="2025">XPL 2025</option>
     </select>
-    </div>
+    </div> */}
     {user ? <div className="dropdown">
       <button className="dropbtn">Hello {user}!
       </button>
@@ -438,13 +438,15 @@ function Sunburst ({award}){
   const [labs,setLabs] = useState([])
   const [vals,setVals] = useState([])
   const [pars,setPars] = useState([])
+  const [hov,setHov] = useState([])
   const {year} = useParams()
   useEffect( ()=>{ 
     (async () => {
-      const {values,parents,labels} = await getAucData(`${year}/graph/${award}/sun`);
+      const {values,parents,labels,hovertext} = await getAucData(`${year}/graph/${award}/sun`);
       setLabs(labels);
       setVals(values);
       setPars(parents);
+      setHov(hovertext)
     })();    
       }
     ,[award])
@@ -457,6 +459,11 @@ function Sunburst ({award}){
   parents: pars,
   values: vals,
   insidetextorientation: 'radial',
+  customdata:hov?hov:vals,
+  hovertemplate:`
+      %{customdata}<br>
+      <extra></extra>
+    `,
   branchvalues:'total'}]} layout={{margin: {l: 0, r: 0, b: 0, t:0}}}></Plot>
   </div>
 

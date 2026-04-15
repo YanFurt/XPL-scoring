@@ -279,7 +279,7 @@ def betting_df(year):
     #Bets success flags
     bets_df = pd.DataFrame([d for d in db_2026['Bets'].find({})])
     bets_df = bets_df[bets_df['_id'].isin(completed_matches.keys())]
-    completed_bets_df = bets_df[bets_df.index.isin(completed_matches.keys())]
+    completed_bets_df = bets_df[bets_df['_id'].isin(completed_matches.keys())]
 
     for participant in participants_2026:
         participant_col = f'{participant}_Bets'

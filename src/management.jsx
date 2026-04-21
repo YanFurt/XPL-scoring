@@ -38,6 +38,7 @@ import {
   DialogContent,
   DialogActions,
 } from "@mui/material";
+import { gridColumnPositionsSelector } from "@mui/x-data-grid";
 
 function SortableElement({ player, containerId }) {
   const {
@@ -306,6 +307,9 @@ export  function SquadSelector() {
         setLookup(Object.fromEntries(
         teamdata.map(obj => [obj._id,{Player:obj.Player, Matches:obj.Team_Matches}])
         ))
+        setCaplog(`You have ${Math.max(limits.cap,0)} free C changes left`)
+        setVcaplog(`You have ${Math.max(limits.vcap,0)} free VC changes left`)
+        setBenchlogs([`You have ${Math.max(limits.transfers,0)} free substitutions left`])
       })();}
       ,[])
 
@@ -313,8 +317,8 @@ export  function SquadSelector() {
 
     const logs=generateBenchLogs(originalbench,bench.map(p=>p._id),setSubstitutions,lookup)
 
-    setBenchlogs(logs)
-  },[bench])
+    setBenchlogs([`You have ${Math.max(quota.transfers,0)} free substitutions left`,...logs])
+  },[bench,quota])
   
   const handleCaptainChange = (event) => {
     const value = event.target.value;
@@ -448,13 +452,14 @@ const handleConfirm = async ()=>{
     setOriginal({cap,vcap})
     setOriginalBench(new Set(bench.map(p=>p.Player)))
     setSubstitutions({in:[],out:[]})
-    setBenchlogs([])
+    setBenchlogs(['Refresh to see your remaining free transfers'])
     setCaplog('')
     setVcaplog('');
     setPayload({in:[],out:[]})
   }
   
-}
+} 
+ console.log(benchlogs)
 
 
   return (
